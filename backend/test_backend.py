@@ -7,10 +7,12 @@ from pathlib import Path
 import ifcopenshell
 import ifcopenshell.geom
 import numpy as np
+import cv2
 import pymupdf
 from fastapi.testclient import TestClient
 
-from backend.analyzer import analyze
+from backend.analyzer import analyze, clean_lines, point_distance
+from backend.raster import extract_lines
 from backend.ifc_export import export_ifc
 from backend import server
 
@@ -43,6 +45,32 @@ class BackendTests(unittest.TestCase):
         self.assertTrue(any(t['text']=='SALA' for t in result['analysis']['texts']))
         self.assertEqual(result['analysis']['wall_segments'],6)
         self.assertRaises(ValueError,analyze,self.pdf,3)
+
+    def test_large_sheet_short_partitions_and_thin_annotations(self):
+        image = np.full((2200, 3200), 255, np.uint8)
+        # A long wall crosses several tiles; a real doorway must stay open.
+        expected = [(100, 300, 1500, 300), (1600, 300, 3100, 300)]
+        # Small partitions are shorter than the old global length threshold.
+        expected += [(x, 300, x, 375) for x in range(200, 3000, 200)]
+        for line in expected:
+            cv2.line(image, line[:2], line[2:], 0, 7)
+        cv2.line(image, (100, 200), (3100, 200), 0, 1)  # dimension line
+        for x in range(300, 2800, 300):
+            cv2.rectangle(image, (x, 600), (x+90, 660), 0, 1)  # furniture
+        raw, info = extract_lines(image)
+        lines = clean_lines(raw, 3200, 2200)
+        self.assertGreater(info['tiles'], 1)
+        self.assertGreater(info['thin_candidates_removed'], 0)
+        for line in expected:
+            midpoint = (np.array(line[:2])+np.array(line[2:]))/2
+            self.assertLess(min(point_distance(midpoint, l)[0] for l in lines), 6)
+        self.assertGreater(min(point_distance(np.array([1550, 300]), l)[0] for l in lines), 30)
+        self.assertFalse(any(abs(l[1]-200)<5 and abs(l[3]-200)<5 for l in lines))
+        self.assertLess(len(lines), len(expected)+5)  # no duplicates at tile seams
+
+    def test_no_silent_350_segment_truncation(self):
+        raw = [(20+x*45, 20+y*45, 45+x*45, 20+y*45) for y in range(20) for x in range(20)]
+        self.assertEqual(len(clean_lines(raw, 1000, 1000)), 400)
 
     def test_ifc_semantics_and_opening(self):
         project={'name':'Prueba','width':10,'ratio':.8,'height':3,'thickness':.2,'walls':[{'id':'door','a':{'x':.1,'y':.5},'b':{'x':.2,'y':.5},'type':'door'}]}

@@ -52,6 +52,10 @@ python -m backend.server
 
 ## Precisión y alcance
 
+El análisis de imágenes conserva hasta 4096 píxeles en el lado mayor. Los planos grandes se procesan por zonas solapadas y los segmentos se unen en las coordenadas de la lámina, manteniendo los huecos entre muros. Esto se aplica tanto al navegador como al motor local. Python centra los trazos de muros rellenos y filtra trazos finos cuando existe suficiente geometría gruesa; este filtro es heurístico y puede omitir elementos finos en dibujos de estilos mezclados. No equivale a reconocer semánticamente cada símbolo.
+
+Las pruebas de regresión incluyen una lámina sintética de 3200 × 2200 con tabiques cortos, cotas y mobiliario fino, un plano de navegador de 1800 × 1350 y 400 segmentos sin truncamiento silencioso. No constituyen una evaluación de precisión sobre planos profesionales reales.
+
 Es un prototipo de diseño conceptual. La reconstrucción automática propone geometría; no garantiza interpretar cualquier plano ni reconoce automáticamente mobiliario, instalaciones o todos los símbolos. Los elementos inferidos se resaltan para revisión. Las cotas, alturas y espesores dependen de los valores confirmados por el usuario.
 
 Las áreas de recintos se aproximan mediante una cuadrícula. Los volúmenes suman segmentos y pueden contar dos veces las intersecciones. No incluye diseño estructural ni comprobación normativa. La coincidencia visual que informa Python mide apoyo de trazos sobre la imagen, no exactitud arquitectónica.

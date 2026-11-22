@@ -8,6 +8,8 @@ import cv2
 import numpy as np
 import pymupdf
 
+from .raster import extract_lines
+
 
 def point_distance(p, line):
     a, b = line[:2], line[2:4]
@@ -18,41 +20,46 @@ def point_distance(p, line):
 
 
 def clean_lines(raw, width, height):
-    minimum = max(18, min(width, height)*.035)
-    lines = [np.array(l[:4], dtype=float) for l in raw if np.linalg.norm(np.array(l[2:4])-np.array(l[:2])) >= minimum]
+    # Thresholds are local pixels, independent of the size of the whole sheet.
+    lines = [np.array(l[:4], dtype=float) for l in raw if np.linalg.norm(np.array(l[2:4])-np.array(l[:2])) >= 20]
     lines.sort(key=lambda l: -np.linalg.norm(l[2:]-l[:2]))
-    result = []
-    tolerance = max(3, min(14, width*.012))
-    for line in lines[:5000]:
-        delta = line[2:]-line[:2]
-        norm = np.linalg.norm(delta)
-        duplicate = False
-        for existing in result:
-            direction = existing[2:]-existing[:2]
-            dot = abs(float(delta @ direction)/(norm*np.linalg.norm(direction)))
-            if dot < .985:
-                continue
-            if max(point_distance(line[:2], existing)[0], point_distance(line[2:], existing)[0]) < tolerance:
-                duplicate = True
-                break
-        if not duplicate:
-            result.append(line)
-        if len(result) >= 350:
-            break
-    # Snap close endpoint-to-endpoint and endpoint-to-line junctions.
+    result = np.empty((0, 4), dtype=float)
+    for line in lines:
+        direction = line[2:]-line[:2]
+        length = np.linalg.norm(direction)
+        unit = direction/length
+        if len(result):
+            starts = result[:, :2]-line[:2]
+            ends = result[:, 2:]-line[:2]
+            distances = np.maximum(np.abs(starts[:, 0]*unit[1]-starts[:, 1]*unit[0]), np.abs(ends[:, 0]*unit[1]-ends[:, 1]*unit[0]))
+            deltas = result[:, 2:]-result[:, :2]
+            parallel = np.abs(deltas @ unit)/np.linalg.norm(deltas, axis=1) > .999
+            p, q = starts @ unit, ends @ unit
+            lo, hi = np.minimum(p, q), np.maximum(p, q)
+            matches = np.flatnonzero(parallel & (distances < 3.5) & (lo <= length+2) & (hi >= -2))
+            if len(matches):
+                # Union only overlapping/touching intervals; never bridge a door.
+                low = min(0., float(lo[matches].min()))
+                high = max(length, float(hi[matches].max()))
+                line = np.concatenate([line[:2]+low*unit, line[:2]+high*unit])
+                result = np.delete(result, matches, axis=0)
+        result = np.vstack([result, line])
+        if len(result) > 2000:
+            raise ValueError('Demasiados trazos ambiguos. Recorta una planta sin el cajetín ni los detalles constructivos.')
+    # Vectorized endpoint snapping keeps large plans responsive.
     for i, line in enumerate(result):
         for offset in (0, 2):
             p = line[offset:offset+2].copy()
-            best, target = 7., None
-            for j, other in enumerate(result):
-                if i == j:
-                    continue
-                distance, t = point_distance(p, other)
-                if distance < best:
-                    best, target = distance, other[:2]+t*(other[2:]-other[:2])
-            if target is not None:
-                line[offset:offset+2] = target
-    return result
+            delta = result[:, 2:]-result[:, :2]
+            den = np.sum(delta*delta, axis=1)
+            t = np.clip(np.sum((p-result[:, :2])*delta, axis=1)/np.maximum(den, 1e-9), 0, 1)
+            targets = result[:, :2]+t[:, None]*delta
+            distances = np.linalg.norm(targets-p, axis=1)
+            distances[i] = np.inf
+            j = int(np.argmin(distances))
+            if distances[j] < 5:
+                line[offset:offset+2] = targets[j]
+    return [l for l in result if np.linalg.norm(l[2:]-l[:2]) >= 20]
 
 
 def decode(data, page_number):
@@ -65,7 +72,7 @@ def decode(data, page_number):
         if not 1 <= page_number <= pages:
             raise ValueError(f'El PDF tiene {pages} páginas.')
         page = doc[page_number-1]
-        scale = min(2.5, 1600/max(page.rect.width, page.rect.height))
+        scale = min(4, 4096/max(page.rect.width, page.rect.height))
         pix = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), alpha=False)
         rgb = np.frombuffer(pix.samples, np.uint8).reshape(pix.height, pix.width, pix.n)
         image = cv2.cvtColor(rgb[:, :, :3], cv2.COLOR_RGB2BGR)
@@ -94,7 +101,7 @@ def decode(data, page_number):
         raise ValueError('El archivo no es una imagen o un PDF válido.')
     if image.shape[0]*image.shape[1] > 60_000_000:
         raise ValueError('La imagen es demasiado grande. Reduce su resolución.')
-    factor = min(1, 1600/max(image.shape[:2]))
+    factor = min(1, 4096/max(image.shape[:2]))
     if factor < 1:
         image = cv2.resize(image, None, fx=factor, fy=factor, interpolation=cv2.INTER_AREA)
     return image, vectors, texts, pages, 'image'
@@ -137,15 +144,11 @@ def analyze(data, page_number=1, world_width=12., height=2.8, thickness=.18, pro
         if (x2-x1)*(y2-y1)<w*h*.02:
             cv2.rectangle(clean,(max(0,x1-1),max(0,y1-1)),(min(w-1,x2+1),min(h-1,y2+1)),255,-1)
     progress(45,'Extrayendo geometría del plano…')
+    raster_info = {'tiles': 0, 'thin_candidates_removed': 0}
     if vectors:
         raw = vectors
     else:
-        # Local contrast correction handles mild illumination gradients.
-        blur = cv2.GaussianBlur(clean,(0,0),18)
-        normalized = cv2.divide(clean,blur,scale=255)
-        edges=cv2.Canny(normalized,55,155)
-        found=cv2.HoughLinesP(edges,1,np.pi/360,35,minLineLength=max(25,min(w,h)*.045),maxLineGap=4)
-        raw=found.reshape(-1,4).tolist() if found is not None else []
+        raw, raster_info = extract_lines(clean, progress)
     lines=clean_lines(raw,w,h)
     if not lines:
         raise ValueError('No se encontraron paredes claras. Usa una imagen frontal y nítida o dibuja sobre el plano.')
@@ -185,7 +188,7 @@ def analyze(data, page_number=1, world_width=12., height=2.8, thickness=.18, pro
     ok,png=cv2.imencode('.png',image)
     if not ok:
         raise ValueError('No se pudo preparar la imagen de referencia.')
-    notes=[f'Motor Python: {len(lines)} segmentos y {len(openings)} aberturas propuestas.',f'Coincidencia visual de trazos: {support:.0%}; no es una medida de exactitud arquitectónica.','Escala, alturas y espesores deben confirmarse. Los muebles e instalaciones no se reconstruyen automáticamente.']
+    notes=[f'Análisis a {w} × {h} píxeles en {raster_info["tiles"] or 1} zonas.',f'Motor Python: {len(lines)} segmentos y {len(openings)} aberturas propuestas.',f'Coincidencia visual de trazos: {support:.0%}; no es una medida de exactitud arquitectónica.','Escala, alturas y espesores deben confirmarse. Los muebles e instalaciones no se reconstruyen automáticamente.']
     if abs(angle)>.4:
         notes.append(f'Rotación corregida: {angle:.1f}°. No se corrigió perspectiva.')
-    return {'version':2,'width':world_width,'ratio':h/w,'height':height,'thickness':thickness,'material':'#e5e7df','floorColor':'#cfb792','walls':walls,'image':'data:image/png;base64,'+base64.b64encode(png).decode(),'report':' '.join(notes),'analysis':{'source':source,'page':page_number,'pages':pages,'texts':texts[:400],'rotation':angle,'line_support':support,'wall_segments':len(lines),'openings':len(openings)}}
+    return {'version':2,'width':world_width,'ratio':h/w,'height':height,'thickness':thickness,'material':'#e5e7df','floorColor':'#cfb792','walls':walls,'image':'data:image/png;base64,'+base64.b64encode(png).decode(),'report':' '.join(notes),'analysis':{'engine_version':'2.2','resolution':[w,h],**raster_info,'source':source,'page':page_number,'pages':pages,'texts':texts[:400],'rotation':angle,'line_support':support,'wall_segments':len(lines),'openings':len(openings)}}

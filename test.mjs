@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {writeFileSync,mkdirSync} from 'node:fs';
 import {deflateSync} from 'node:zlib';
 import {findRooms,quantities,validateProject,nearest,toDXF} from './dist/geometry.mjs';
-import {detectPlan} from './dist/detect.mjs';
+import {detectPlan,detectLargePlan} from './dist/detect.mjs';
 const wall=(x1,y1,x2,y2,type='wall')=>({a:{x:x1,y:y1},b:{x:x2,y:y2},type});
 const rectangle=[wall(.1,.1,.9,.1),wall(.9,.1,.9,.9),wall(.9,.9,.1,.9),wall(.1,.9,.1,.1)];
 let rooms=findRooms(rectangle,10,10,.2);assert.equal(rooms.length,1);assert.ok(Math.abs(rooms[0].area-7.8**2)<1,rooms[0].area);
@@ -15,5 +15,14 @@ function line(x1,y1,x2,y2,r=4){for(let y=Math.max(0,Math.floor(Math.min(y1,y2)-r
 line(60,50,540,50);line(540,50,540,400);line(540,400,60,400);line(60,400,60,50);line(300,50,300,200);line(300,245,300,400);
 const detected=detectPlan(data,width,height,12);console.log('Detection fixture:',detected.stats,detected.walls.map(w=>[w.type,w.a,w.b]));assert.ok(detected.walls.length>=6&&detected.walls.length<25,'Unexpected wall count');assert.ok(detected.walls.some(w=>w.type==='door'),'Missing opening');for(const target of [wall(.1,50/450,.9,50/450),wall(.9,50/450,.9,400/450),wall(.1,400/450,.9,400/450)])assert.ok(detected.walls.some(w=>nearest({x:(target.a.x+target.b.x)/2,y:(target.a.y+target.b.y)/2},w,600,450).d<10),'Missing rectangle side');
 assert.equal(detectPlan(new Uint8ClampedArray(width*height*4).fill(255),width,height,12).walls.length,0);
+const largeWidth=1800,largeHeight=1350,large=new Uint8ClampedArray(largeWidth*largeHeight*4);
+for(let y=0;y<largeHeight;y++)for(let x=0;x<largeWidth;x++){const s=(Math.floor(y/3)*width+Math.floor(x/3))*4;large.set(data.subarray(s,s+4),(y*largeWidth+x)*4)}
+const largeResult=detectLargePlan(large,largeWidth,largeHeight,12);
+assert.ok(largeResult.stats.tiles>1);
+assert.equal(largeResult.stats.segments,6,'Tile seams duplicated walls');
+for(const p of [{x:.1,y:.5},{x:.9,y:.5},{x:.5,y:50/450},{x:.5,y:400/450},{x:.5,y:.3},{x:.5,y:.8}])assert.ok(largeResult.walls.some(w=>w.type==='wall'&&nearest(p,w,largeWidth,largeHeight).d<16),'Large plan lost a wall');
+assert.ok(largeResult.walls.some(w=>w.type==='door'),'Large plan lost doorway');
+assert.ok(!largeResult.walls.some(w=>w.type==='wall'&&nearest({x:.5,y:222/450},w,largeWidth,largeHeight).d<20),'Tile merge closed a doorway');
+console.log('Large sheet:',largeResult.stats);
 const crcTable=Array.from({length:256},(_,i)=>{let c=i;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0});function crc(b){let c=0xffffffff;for(const x of b)c=crcTable[(c^x)&255]^(c>>>8);return(c^0xffffffff)>>>0}function chunk(type,buf){const t=Buffer.from(type),out=Buffer.alloc(buf.length+12);out.writeUInt32BE(buf.length);t.copy(out,4);buf.copy(out,8);out.writeUInt32BE(crc(Buffer.concat([t,buf])),out.length-4);return out}const ihdr=Buffer.alloc(13);ihdr.writeUInt32BE(width);ihdr.writeUInt32BE(height,4);ihdr[8]=8;ihdr[9]=6;const scan=Buffer.alloc(height*(width*4+1));for(let y=0;y<height;y++)Buffer.from(data.buffer,y*width*4,width*4).copy(scan,y*(width*4+1)+1);mkdirSync('fixtures',{recursive:true});writeFileSync('fixtures/plano-prueba.png',Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',ihdr),chunk('IDAT',deflateSync(scan)),chunk('IEND',Buffer.alloc(0))]));
 console.log('Geometry, quantities, legacy import, DXF, blank image and reconstruction checks passed.');
