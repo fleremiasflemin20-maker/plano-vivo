@@ -1,0 +1,8 @@
+* text=auto
+*.pdf -text
+*.png -text
+*.glb -text
+*.js text eol=lf
+*.mjs text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
