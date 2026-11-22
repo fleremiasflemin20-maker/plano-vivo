@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+runtime/
+index-v1.backup.html
+*.tar.gz
+
+work-update.py
+.env
+.env.*
+*.log
+*.sqlite3
+.DS_Store
+
