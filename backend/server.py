@@ -2,6 +2,7 @@
 
 import json
 import mimetypes
+import re
 import sqlite3
 import threading
 import time
@@ -12,11 +13,14 @@ from typing import Literal
 from urllib.parse import urlparse
 from uuid import uuid4
 
+import cv2
+import numpy as np
 import pymupdf
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .analyzer import analyze
@@ -31,6 +35,7 @@ lock = threading.Lock()
 active = {}
 ocr_engine = None
 ocr_attempted = False
+ocr_lock = threading.Lock()
 mimetypes.add_type('text/javascript', '.mjs')
 mimetypes.add_type('text/javascript', '.js')
 
@@ -111,6 +116,30 @@ async def inspect(file: UploadFile = File(...)):
         raise HTTPException(422, str(exc))
 
 
+@app.post('/api/ocr')
+async def ocr_image(file: UploadFile = File(...), boxes: str | None = Form(None)):
+    data = await read_upload(file)
+    try:
+        areas = None
+        if boxes is not None:
+            areas = json.loads(boxes)
+            if not isinstance(areas, list) or not all(
+                isinstance(b, list)
+                and len(b) == 4
+                and all(isinstance(v, (int, float)) and 0 <= v <= 1 for v in b)
+                and b[0] < b[2]
+                and b[1] < b[3]
+                for b in areas
+            ):
+                raise ValueError('Áreas de texto no válidas.')
+        texts = await run_in_threadpool(read_texts, data, areas)
+    except (ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(422, str(exc))
+    if texts is None:
+        raise HTTPException(501, 'OCR no disponible: instala las dependencias de backend.')
+    return {'texts': texts}
+
+
 def update(job_id, status, percent, message, result=None):
     with connect() as db:
         db.execute(
@@ -125,15 +154,10 @@ def update(job_id, status, percent, message, result=None):
         )
 
 
-def run_job(job_id, data, page, width, height, thickness, cancelled):
+def get_ocr():
+    """RapidOCR, loaded once on first use (None when it is not installed)."""
     global ocr_engine, ocr_attempted
-
-    def progress(percent, message):
-        if cancelled.is_set():
-            raise InterruptedError('Analisis cancelado.')
-        update(job_id, 'running', percent, message)
-
-    try:
+    with ocr_lock:
         if not ocr_attempted:
             ocr_attempted = True
             try:
@@ -142,7 +166,81 @@ def run_job(job_id, data, page, width, height, thickness, cancelled):
                 ocr_engine = RapidOCR()
             except Exception:
                 ocr_engine = None
-        result = analyze(data, page, width, height, thickness, progress, ocr_engine)
+    return ocr_engine
+
+
+# Plan labels are Latin text, numbers and units; anything else is a misreading.
+PLAN_TEXT = re.compile(r"[0-9A-Za-zÁÉÍÓÚÜÑáéíóúüñ .,:;'()/+\-²³°ºª&#%]+")
+
+
+def read_texts(data, boxes=None):
+    """
+    Texts in an image. Without `boxes`, detect and read everything (boxes as fractions
+    of the image size). With `boxes` (fractions [x0, y0, x1, y1], e.g. the text areas
+    found by the browser recogniser), read each area on its own, enlarged: small room
+    numbers that full-page detection misses can still be read.
+    """
+    image = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+    if image is None:
+        raise ValueError('El archivo no es una imagen válida.')
+    engine = get_ocr()
+    if engine is None:
+        return None
+    h, w = image.shape[:2]
+    if boxes is not None:
+        texts = []
+        for index, (x0, y0, x1, y1) in enumerate(boxes[:200]):
+            pad = 2
+            crop = image[
+                max(0, int(y0 * h) - pad) : min(h, int(y1 * h) + pad + 1),
+                max(0, int(x0 * w) - pad) : min(w, int(x1 * w) + pad + 1),
+            ]
+            if crop.shape[0] < 4 or crop.shape[1] < 4:
+                continue
+            k = 48 / crop.shape[0]
+            crop = cv2.resize(crop, None, fx=k, fy=k, interpolation=cv2.INTER_CUBIC)
+            crop = cv2.copyMakeBorder(crop, 16, 16, 16, 16, cv2.BORDER_REPLICATE)
+            results, _ = engine(crop, use_det=False, use_cls=False, use_rec=True)
+            if not results:
+                continue
+            text, score = str(results[0][0]).strip(), float(results[0][1])
+            if score >= 0.5 and PLAN_TEXT.fullmatch(text):
+                texts.append({'index': index, 'text': text[:150], 'score': round(score, 3)})
+        return texts
+    # Small web images: OCR needs letters a few tens of pixels high.
+    factor = min(4.0, max(1.0, 1600 / max(h, w)))
+    if factor > 1:
+        image = cv2.resize(image, None, fx=factor, fy=factor, interpolation=cv2.INTER_CUBIC)
+    results, _ = engine(image)
+    texts = []
+    for box, text, score in results or []:
+        text = str(text).strip()
+        if score < 0.6 or not PLAN_TEXT.fullmatch(text):
+            continue
+        points = np.array(box) / factor
+        texts.append(
+            {
+                'text': text[:150],
+                'box': [
+                    float(points[:, 0].min() / w),
+                    float(points[:, 1].min() / h),
+                    float(points[:, 0].max() / w),
+                    float(points[:, 1].max() / h),
+                ],
+                'score': round(float(score), 3),
+            }
+        )
+    return texts[:400]
+
+
+def run_job(job_id, data, page, width, height, thickness, cancelled):
+    def progress(percent, message):
+        if cancelled.is_set():
+            raise InterruptedError('Analisis cancelado.')
+        update(job_id, 'running', percent, message)
+
+    try:
+        result = analyze(data, page, width, height, thickness, progress, get_ocr())
         if not cancelled.is_set():
             update(job_id, 'succeeded', 100, 'Modelo listo.', result)
     except InterruptedError:

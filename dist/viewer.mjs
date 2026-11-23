@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.js';
-import { nearest } from './geometry.mjs';
+import { nearest, FURNITURE } from './geometry.mjs';
 export function createViewer(container, onStatus) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#e8eeea');
@@ -30,7 +30,8 @@ export function createViewer(container, onStatus) {
     drag = null,
     position = new THREE.Vector3(),
     keys = {},
-    floorTexture = null;
+    floorTexture = null,
+    decals = [];
   const mat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.82 });
   function box(w, h, d, x, y, z, material, rotation = 0, name = '') {
     if (w <= 0 || h <= 0 || d <= 0) return;
@@ -54,6 +55,8 @@ export function createViewer(container, onStatus) {
     }
     floorTexture?.dispose();
     floorTexture = null;
+    decals.forEach((t) => t.dispose());
+    decals = [];
     const { walls, W, D, H, T, rooms, image, material, floorColor, imageFloor, selected } = data,
       features = data.features || [];
     const base = box(W, 0.13, D, 0, -0.09, 0, mat('#d9dfd7'), 0, 'Base');
@@ -113,7 +116,7 @@ export function createViewer(container, onStatus) {
       floor.name = 'Referencia del plano';
       group.add(floor);
     }
-    for (const f of features) buildFeature(f, W, D, H);
+    for (const f of features) buildFeature(f, W, D, H, image);
     for (const s of walls) {
       const dx = (s.b.x - s.a.x) * W,
         dz = (s.b.y - s.a.y) * D,
@@ -211,11 +214,13 @@ export function createViewer(container, onStatus) {
     return out;
   }
 
-  function buildFeature(f, W, D, H) {
+  function buildFeature(f, W, D, H, image) {
     const x0 = f.x * W - W / 2,
       z0 = f.y * D - D / 2,
       w = f.w * W,
       d = f.h * D;
+    if (f.type === 'furniture') return buildFurniture(f, x0, z0, w, d);
+    if (f.type === 'label') return buildLabel(f, x0, z0, w, d, image);
     if (f.type === 'terrace') {
       box(w, 0.05, d, x0 + w / 2, 0.025, z0 + d / 2, mat('#b89f78'), 0, 'Terraza');
       return;
@@ -234,6 +239,141 @@ export function createViewer(container, onStatus) {
       if (f.axis === 'y') box(w, top, run, x0 + w / 2, top / 2, z0 + pos, stepMat, 0, 'Peldaño');
       else box(run, top, d, x0 + along - pos, top / 2, z0 + d / 2, stepMat, 0, 'Peldaño');
     }
+  }
+
+  /** Simple furniture blocks: recognisable silhouettes, not detailed models. */
+  function buildFurniture(f, x0, z0, w, d) {
+    const name = FURNITURE[f.kind]?.name || 'Mueble',
+      cx = x0 + w / 2,
+      cz = z0 + d / 2,
+      // Inner offset towards a side ('n' = -z, 's' = +z, 'w' = -x, 'e' = +x).
+      toward = (side, depth) => {
+        const dx = side === 'w' ? -(w - depth) / 2 : side === 'e' ? (w - depth) / 2 : 0,
+          dz = side === 'n' ? -(d - depth) / 2 : side === 's' ? (d - depth) / 2 : 0;
+        return { x: cx + dx, z: cz + dz };
+      },
+      alongX = (side) => side === 'n' || side === 's';
+    switch (f.kind) {
+      case 'bed': {
+        box(w, 0.3, d, cx, 0.15, cz, mat('#9c7a55'), 0, name);
+        box(w - 0.06, 0.2, d - 0.06, cx, 0.4, cz, mat('#f1efe9'), 0, name);
+        const back = f.back || (w < d ? 'n' : 'w'),
+          head = toward(back, 0.06),
+          pillow = toward(back, 0.5);
+        if (alongX(back)) {
+          box(w, 0.95, 0.06, head.x, 0.475, head.z, mat('#7d5f3f'), 0, name);
+          box(w - 0.2, 0.12, 0.35, pillow.x, 0.56, pillow.z, mat('#ffffff'), 0, name);
+        } else {
+          box(0.06, 0.95, d, head.x, 0.475, head.z, mat('#7d5f3f'), 0, name);
+          box(0.35, 0.12, d - 0.2, pillow.x, 0.56, pillow.z, mat('#ffffff'), 0, name);
+        }
+        return;
+      }
+      case 'sofa': {
+        const fabric = mat('#6f7f8f');
+        box(w, 0.42, d, cx, 0.21, cz, fabric, 0, name);
+        const back = f.back || (w > d ? 'n' : 'w'),
+          p = toward(back, 0.22);
+        if (alongX(back)) box(w, 0.8, 0.22, p.x, 0.4, p.z, fabric, 0, name);
+        else box(0.22, 0.8, d, p.x, 0.4, p.z, fabric, 0, name);
+        return;
+      }
+      case 'table': {
+        const wood = mat('#a07850'),
+          leg = 0.05;
+        box(w, 0.04, d, cx, 0.74, cz, wood, 0, name);
+        for (const sx of [-1, 1])
+          for (const sz of [-1, 1])
+            box(
+              leg,
+              0.72,
+              leg,
+              cx + sx * (w / 2 - leg),
+              0.36,
+              cz + sz * (d / 2 - leg),
+              wood,
+              0,
+              name,
+            );
+        return;
+      }
+      case 'counter':
+        box(w, 0.86, d, cx, 0.43, cz, mat('#e8e4dc'), 0, name);
+        box(w + 0.02, 0.04, d + 0.02, cx, 0.88, cz, mat('#5b5b5b'), 0, name);
+        return;
+      default:
+        box(
+          w,
+          FURNITURE[f.kind]?.height || 0.75,
+          d,
+          cx,
+          (FURNITURE[f.kind]?.height || 0.75) / 2,
+          cz,
+          mat(f.kind === 'bathtub' || f.kind === 'small' ? '#f4f6f8' : '#b9a48a'),
+          0,
+          name,
+        );
+    }
+  }
+
+  /**
+   * Text on the floor: the label's own pixels cut from the plan (ink kept, paper made
+   * transparent), or the text read by OCR when there is one.
+   */
+  function buildLabel(f, x0, z0, w, d, image) {
+    const canvas = document.createElement('canvas'),
+      g = canvas.getContext('2d');
+    if (f.text) {
+      canvas.width = 512;
+      canvas.height = Math.max(16, Math.round((512 * d) / w));
+      g.fillStyle = '#2f3a35';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      let size = canvas.height * 0.8;
+      g.font = `600 ${size}px system-ui, sans-serif`;
+      while (size > 8 && g.measureText(f.text).width > canvas.width * 0.95) {
+        size *= 0.9;
+        g.font = `600 ${size}px system-ui, sans-serif`;
+      }
+      g.fillText(f.text, canvas.width / 2, canvas.height / 2);
+    } else {
+      const iw = image?.naturalWidth || image?.width,
+        ih = image?.naturalHeight || image?.height;
+      if (!iw || !ih) return;
+      const sx = f.x * iw,
+        sy = f.y * ih,
+        sw = Math.max(1, f.w * iw),
+        sh = Math.max(1, f.h * ih),
+        scale = Math.max(1, Math.min(8, 256 / Math.max(sw, sh)));
+      canvas.width = Math.round(sw * scale);
+      canvas.height = Math.round(sh * scale);
+      g.imageSmoothingEnabled = true;
+      g.drawImage(image, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      const px = g.getImageData(0, 0, canvas.width, canvas.height),
+        data = px.data;
+      // Paper → transparent, ink → dark grey with matching opacity.
+      let lightest = 0;
+      for (let i = 0; i < data.length; i += 4)
+        lightest = Math.max(lightest, data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11);
+      for (let i = 0; i < data.length; i += 4) {
+        const lum = data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11,
+          ink = Math.max(0, Math.min(1, (lightest - lum) / 90));
+        data[i] = data[i + 1] = data[i + 2] = 40;
+        data[i + 3] = Math.round(ink * 255);
+      }
+      g.putImageData(px, 0, 0);
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    decals.push(texture);
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, d),
+      new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false }),
+    );
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.set(x0 + w / 2, 0.02, z0 + d / 2);
+    plane.name = f.text ? 'Texto: ' + f.text : 'Texto del plano';
+    group.add(plane);
   }
 
   function resize() {

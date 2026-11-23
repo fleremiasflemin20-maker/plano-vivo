@@ -53,6 +53,28 @@ assert.throws(() =>
     material: '#ffffff',
   }),
 );
+{
+  const base = {
+      version: 1,
+      walls: rectangle,
+      width: 10,
+      ratio: 1,
+      height: 3,
+      thickness: 0.2,
+      material: '#ffffff',
+    },
+    features = [
+      { type: 'furniture', kind: 'bed', x: 0.1, y: 0.1, w: 0.2, h: 0.2, back: 'n' },
+      { type: 'label', text: 'COCINA', x: 0.5, y: 0.5, w: 0.1, h: 0.03 },
+      { type: 'label', x: 0.6, y: 0.6, w: 0.1, h: 0.03 },
+    ];
+  assert.doesNotThrow(() => validateProject({ ...base, features }));
+  assert.throws(() => validateProject({ ...base, features: [{ ...features[0], kind: 'trono' }] }));
+  const dxf = toDXF(rectangle, 10, 10, features);
+  assert.equal((dxf.match(/\nMUEBLES\n/g) || []).length, 4);
+  assert.match(dxf, /TEXT\n8\nTEXTOS[\s\S]*\n1\nCOCINA/);
+  assert.equal((dxf.match(/TEXTOS/g) || []).length, 1, 'unread labels are not written');
+}
 const width = 600,
   height = 450,
   data = new Uint8ClampedArray(width * height * 4).fill(255);

@@ -136,6 +136,44 @@ class BackendTests(unittest.TestCase):
                         ).json()['pages'],
                         2,
                     )
+                    # Room names on a small web-sized image are read (OCR).
+                    sheet = np.full((300, 480, 3), 255, np.uint8)
+                    cv2.putText(sheet, 'COCINA', (40, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.9, 0, 2)
+                    cv2.putText(sheet, '12', (300, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.9, 0, 2)
+                    read = client.post(
+                        '/api/ocr',
+                        files={'file': ('t.png', cv2.imencode('.png', sheet)[1].tobytes())},
+                    )
+                    self.assertEqual(read.status_code, 200, read.text)
+                    texts = {t['text']: t['box'] for t in read.json()['texts']}
+                    self.assertIn('COCINA', texts)
+                    x0, y0, x1, y1 = texts['COCINA']
+                    self.assertTrue(0.05 < x0 < 0.15 and 0.3 < y0 < 0.4 and x1 < 0.5, texts)
+                    # Areas found by the browser: each one read on its own.
+                    areas = client.post(
+                        '/api/ocr',
+                        files={'file': ('t.png', cv2.imencode('.png', sheet)[1].tobytes())},
+                        data={
+                            'boxes': json.dumps([[0.6, 0.62, 0.72, 0.76], [0.07, 0.3, 0.42, 0.42]])
+                        },
+                    )
+                    self.assertEqual(areas.status_code, 200, areas.text)
+                    self.assertEqual(
+                        {t['index']: t['text'] for t in areas.json()['texts']},
+                        {0: '12', 1: 'COCINA'},
+                    )
+                    self.assertEqual(
+                        client.post('/api/ocr', files={'file': ('x.png', b'nope')}).status_code,
+                        422,
+                    )
+                    self.assertEqual(
+                        client.post(
+                            '/api/ocr',
+                            files={'file': ('t.png', cv2.imencode('.png', sheet)[1].tobytes())},
+                            data={'boxes': '[[0.5, 0.5, 0.2, 0.9]]'},
+                        ).status_code,
+                        422,
+                    )
                     response = client.post(
                         '/api/jobs',
                         files={'file': ('test.pdf', self.pdf, 'application/pdf')},

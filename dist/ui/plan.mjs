@@ -1,5 +1,5 @@
 // 2D plan canvas: drawing, drawing tools, selection and the element inspector.
-import { clamp, length, nearest } from '../geometry.mjs';
+import { clamp, length, nearest, FURNITURE } from '../geometry.mjs';
 import {
   $,
   num,
@@ -221,7 +221,10 @@ function drawWall(w) {
   }
 }
 
-/** Stairs (treads + climbing arrow) and terraces (hatched decking). */
+/**
+ * Stairs (treads + climbing arrow), terraces (hatched decking), furniture (outline,
+ * thick edge at the head or back, name) and text labels.
+ */
 function drawFeature(f) {
   const a = screen({ x: f.x, y: f.y }),
     b = screen({ x: f.x + f.w, y: f.y + f.h }),
@@ -229,6 +232,41 @@ function drawFeature(f) {
     h = b.y - a.y;
   ctx.save();
   ctx.lineWidth = 1;
+  if (f.type === 'furniture') {
+    ctx.fillStyle = '#fbe9d7cc';
+    ctx.fillRect(a.x, a.y, w, h);
+    ctx.strokeStyle = '#c47a2c';
+    ctx.strokeRect(a.x, a.y, w, h);
+    if (f.back) {
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      const [x0, y0, x1, y1] = {
+        n: [a.x, a.y, b.x, a.y],
+        s: [a.x, b.y, b.x, b.y],
+        w: [a.x, a.y, a.x, b.y],
+        e: [b.x, a.y, b.x, b.y],
+      }[f.back];
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+    }
+    ctx.restore();
+    if (w > 28 && h > 12)
+      label(FURNITURE[f.kind]?.name || 'Mueble', a.x + w / 2, a.y + h / 2 + 4, '#9a5a1c');
+    return;
+  }
+  if (f.type === 'label') {
+    if (f.text) {
+      ctx.restore();
+      label(f.text, a.x + w / 2, a.y + h / 2 + 4, '#7a3f9a');
+      return;
+    }
+    ctx.strokeStyle = '#a05cc0';
+    ctx.setLineDash([3, 3]);
+    ctx.strokeRect(a.x, a.y, w, h);
+    ctx.restore();
+    return;
+  }
   if (f.type === 'terrace') {
     ctx.fillStyle = '#f3ead6';
     ctx.fillRect(a.x, a.y, w, h);
@@ -497,10 +535,11 @@ function erase(raw) {
     rebuild();
     return;
   }
-  // No wall under the pointer: remove the stair or terrace there, if any.
-  const f = state.features.find(
-    (f) => raw.x >= f.x && raw.x <= f.x + f.w && raw.y >= f.y && raw.y <= f.y + f.h,
-  );
+  // No wall under the pointer: remove the smallest element there (a piece of
+  // furniture or a text before the terrace it stands on).
+  const f = state.features
+    .filter((f) => raw.x >= f.x && raw.x <= f.x + f.w && raw.y >= f.y && raw.y <= f.y + f.h)
+    .sort((p, q) => p.w * p.h - q.w * q.h)[0];
   if (!f) return;
   checkpoint();
   state.features = state.features.filter((s) => s !== f);

@@ -43,8 +43,8 @@ python -m backend.server
 - Longitudes, áreas netas de muros y volúmenes geométricos preliminares.
 - Deshacer/rehacer, autoguardado IndexedDB y cinco versiones locales recuperables.
 - Importación de los proyectos JSON de la primera versión.
-- Reconocimiento de planos arquitectónicos desde imágenes, en un trabajador separado: muros y tabiques con su grosor real, puertas con su lado de giro, ventanas y ventanales, pasos, escaleras y terrazas, escala leída de la barra gráfica (o estimada por el ancho de las puertas) y recintos cerrados.
-- Escaleras y terrazas como elementos de planta: se dibujan en 2D, se construyen en 3D (peldaños hasta la altura de planta, tarima) y se exportan en DXF.
+- Reconocimiento de planos arquitectónicos desde imágenes, en un trabajador separado: muros y tabiques con su grosor real (también en diagonal, con sus puertas y ventanas), puertas con su lado de giro, ventanas y ventanales, pasos, escaleras y terrazas, muebles, textos, escala leída de la barra gráfica (o estimada por el ancho de las puertas) y recintos cerrados.
+- Escaleras, terrazas, muebles y textos como elementos de planta: se dibujan en 2D, se construyen en 3D (peldaños hasta la altura de planta, tarima, cama con cabecero, sofá con respaldo, mesa con patas, encimera, bloques para el resto; los textos sobre el piso) y se exportan en DXF (capas ESCALERAS, TERRAZAS, MUEBLES y TEXTOS).
 - Vista dual, materiales básicos, iluminación y recorrido con colisiones.
 - Exportación DXF, SVG, GLB, CSV y PNG.
 - Motor local FastAPI/OpenCV: lectura de vectores PDF, selección de página, limpieza de imagen, corrección de inclinación y OCR con RapidOCR.
@@ -63,8 +63,12 @@ python -m backend.server
 4. **Líneas finas.** El *black-hat* (contraste local) detecta líneas tenues aunque estén sobre un piso gris.
 5. **Aberturas.** Cada hueco entre muros alineados, o entre el extremo de un muro y otro muro, se clasifica: líneas dentro = ventana; arco u hoja = puerta, con su bisagra y lado de giro; vacío = paso, o ventanal si es ancho.
 6. **Uniones.** Los extremos se ajustan a los muros perpendiculares para cerrar esquinas y recintos.
-7. **Escaleras y terrazas.** Series regulares de líneas paralelas: peldaños si el paso es de alrededor de un grosor de muro (≈ 0,28 m), pavimento si es mayor o forma una rejilla.
-8. **Escala.** La barra gráfica se reconoce por la proporción entre sus divisiones (por ejemplo 0 – 1 – 2,5 – 5 m) sin leer los números; si no hay barra, se usa el ancho de al menos dos puertas. En ambos casos el grosor de muro resultante debe ser físicamente razonable.
+7. **Muros en diagonal.** El tensor de estructura mide la orientación local de los trazos gruesos; los que van en ángulo se separan antes de buscar los muros rectos (si no, saldrían como una escalera de trozos cortos). Cada trazo recto y del grosor de un muro se convierte en muro con su dirección y grosor, se une a los muros que toca y, si hay un hueco entre dos tramos alineados, en puerta o ventana.
+8. **Escaleras y terrazas.** Series regulares de líneas paralelas: peldaños si el paso es de alrededor de un grosor de muro (≈ 0,28 m), pavimento si es mayor o forma una rejilla. Se buscan en un trazo más tenue que el resto (las huellas suelen dibujarse muy claras, y ampliar una imagen pequeña las difumina) y se admite una huella perdida en la serie.
+9. **Muebles y textos.** Los trazos finos que quedan se agrupan. Los grupos pequeños, de alrededor de un grosor de muro de alto, son textos (números de recinto, rótulos). Los contornos con medidas de mueble se clasifican por tamaño en metros: cama, sofá, mesa, encimera, bañera o mueble pequeño, y se descartan los que van de pared a pared (baldosas). Los textos se colocan en 3D como la imagen de su zona del plano; con el motor Python se leen con OCR (RapidOCR) y se escriben como texto.
+10. **Escala.** La barra gráfica se reconoce por la proporción entre sus divisiones (por ejemplo 0 – 1 – 2,5 – 5 m) sin leer los números; si no hay barra, se usa el ancho de al menos dos puertas. En ambos casos el grosor de muro resultante debe ser físicamente razonable.
+
+Los muebles se clasifican solo por su tamaño y su forma; un mueble poco habitual sale como «Mueble» genérico. Los muros curvos no se reconocen, y los planos de líneas dobles (sin muros rellenos) todavía no reconocen muros en diagonal, muebles ni textos.
 
 Si la imagen no parece un plano arquitectónico (un croquis a mano, por ejemplo), se usa el detector de líneas anterior. Con el motor Python, los PDF siguen usando la lectura de vectores; las imágenes usan este reconocimiento.
 
@@ -87,6 +91,8 @@ node test.mjs
 python -m unittest backend.test_backend -v
 ```
 
+Las pruebas del reconocedor usan dos láminas sintéticas con la respuesta conocida, cada una a dos resoluciones: una planta con escalera de trazo tenue, terraza, cama, mesa y rótulo, y otra con un chaflán a 45° con puerta y un tabique a 30°. Las del motor Python incluyen la lectura OCR de una imagen pequeña, completa y por zonas.
+
 Las pruebas verifican áreas y cantidades con aberturas, proyectos antiguos, exportación DXF, detección de un plano sintético e imagen vacía, lectura de vectores y textos PDF, API de trabajos, restricción de origen y geometría/relaciones IFC. Se verificaron además en navegador dibujo rectangular, deshacer/rehacer, construcción PNG/PDF, edición por medidas, recorrido y descarga GLB/IFC.
 
 Los archivos de `fixtures/` son planos sintéticos generados para pruebas, no planos personales.
@@ -101,7 +107,7 @@ Los archivos de `fixtures/` son planos sintéticos generados para pruebas, no pl
 - `dist/ui/model.mjs`: recálculo de recintos y cantidades, modelo 3D, restauración y ejemplo.
 - `dist/ui/build.mjs`: importación de imágenes/PDF y reconstrucción (navegador o Python).
 - `dist/ui/files.mjs`: guardar/abrir proyectos, versiones locales y exportaciones.
-- `dist/recognize/`: reconocimiento de planos (`raster.mjs` operaciones de imagen, `walls.mjs` muros, `openings.mjs` aberturas, `features.mjs` escaleras y terrazas, `scale.mjs` escala, `index.mjs` orquestación).
+- `dist/recognize/`: reconocimiento de planos (`raster.mjs` operaciones de imagen, `walls.mjs` muros rectos y en diagonal, `openings.mjs` aberturas, `features.mjs` escaleras y terrazas, `objects.mjs` muebles y textos, `scale.mjs` escala, `index.mjs` orquestación).
 - `dist/geometry.mjs`, `dist/detect.mjs`, `dist/viewer.mjs`, `dist/storage.mjs`: geometría, detector de líneas (respaldo), visor Three.js e IndexedDB.
 - `backend/`: motor local FastAPI (`server.py`), análisis OpenCV/PDF (`analyzer.py`, `raster.py`) e IFC (`ifc_export.py`).
 
@@ -118,7 +124,8 @@ python -m pip install ruff==0.17.6 && ruff format backend preview.py
 
 ## Hoja de ruta pendiente
 
-- Reconocimiento semántico de mobiliario, instalaciones y símbolos, con un banco de planos reales etiquetados.
+- Reconocimiento de mobiliario por su símbolo (no solo por tamaño), instalaciones y símbolos, con un banco de planos reales etiquetados.
+- Lectura de textos (OCR) también en la versión web, sin el motor Python.
 - Aceptación y comparación de detecciones por partes sin reemplazar correcciones.
 - Varias plantas, escaleras, desniveles y alineación entre pisos.
 - Recorridos automáticos con puntos de interés.
