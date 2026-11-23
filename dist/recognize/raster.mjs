@@ -334,3 +334,81 @@ export function at(mask, w, h, x, y) {
   y = Math.round(y);
   return x >= 0 && y >= 0 && x < w && y < h ? mask[y * w + x] : 0;
 }
+
+/**
+ * Isotropic opening with a disc of radius `r`, from the mask's distance transform:
+ * keeps strokes wider than 2r at any angle (a square element thins out diagonals).
+ */
+export function discOpen(dist, w, h, r) {
+  const core = new Uint8Array(dist.length);
+  for (let i = 0; i < dist.length; i++) core[i] = dist[i] > r ? 0 : 1; // complement of core
+  const toCore = distanceTransform(core, w, h),
+    out = new Uint8Array(dist.length);
+  for (let i = 0; i < dist.length; i++) out[i] = dist[i] > 0 && toCore[i] <= r + 0.5 ? 1 : 0;
+  return out;
+}
+
+function boxBlur(src, w, h, r) {
+  const tmp = new Float32Array(src.length),
+    out = new Float32Array(src.length);
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    let acc = 0;
+    for (let x = -r; x <= r; x++) acc += src[row + Math.min(w - 1, Math.max(0, x))];
+    for (let x = 0; x < w; x++) {
+      tmp[row + x] = acc;
+      acc += src[row + Math.min(w - 1, x + r + 1)] - src[row + Math.max(0, Math.min(w - 1, x - r))];
+    }
+  }
+  for (let x = 0; x < w; x++) {
+    let acc = 0;
+    for (let y = -r; y <= r; y++) acc += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
+    for (let y = 0; y < h; y++) {
+      out[y * w + x] = acc;
+      acc +=
+        tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, Math.min(h - 1, y - r)) * w + x];
+    }
+  }
+  return out;
+}
+
+/**
+ * Set pixels of `mask` lying on strokes that run at an angle (between `minDeg` and
+ * 90° − `minDeg` from the axes). Orientation comes from the structure tensor of the
+ * mask's edges averaged over a window of radius `r`; corners and junctions mix
+ * directions (low coherence) and stay out. Also returns the averaged tensor.
+ */
+export function slantedPixels(mask, w, h, r, minDeg = 10) {
+  const soft = boxBlur(mask, w, h, 1),
+    jxx = new Float32Array(mask.length),
+    jyy = new Float32Array(mask.length),
+    jxy = new Float32Array(mask.length);
+  for (let y = 1; y < h - 1; y++)
+    for (let x = 1; x < w - 1; x++) {
+      const k = y * w + x,
+        gx = soft[k + 1] - soft[k - 1],
+        gy = soft[k + w] - soft[k - w];
+      jxx[k] = gx * gx;
+      jyy[k] = gy * gy;
+      jxy[k] = gx * gy;
+    }
+  const sxx = boxBlur(jxx, w, h, r),
+    syy = boxBlur(jyy, w, h, r),
+    sxy = boxBlur(jxy, w, h, r),
+    out = new Uint8Array(mask.length),
+    lo = (minDeg * Math.PI) / 180;
+  for (let i = 0; i < mask.length; i++) {
+    if (!mask[i]) continue;
+    const a = sxx[i],
+      b = syy[i],
+      c = sxy[i],
+      trace = a + b;
+    if (trace < 1e-6) continue;
+    const coherence = ((a - b) ** 2 + 4 * c * c) / (trace * trace);
+    if (coherence < 0.5) continue;
+    // Gradient direction (normal to the stroke), folded into [0, π/2].
+    const theta = Math.abs(0.5 * Math.atan2(2 * c, a - b)) % (Math.PI / 2);
+    if (theta > lo && theta < Math.PI / 2 - lo) out[i] = 1;
+  }
+  return { mask: out, sxx, syy, sxy };
+}

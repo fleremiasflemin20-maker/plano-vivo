@@ -152,12 +152,26 @@ export function validateProject(d) {
   if (d.image && !/^data:image\/png;base64,/.test(d.image)) throw Error('Imagen no válida');
   return d;
 }
-export const FEATURE_TYPES = ['stair', 'terrace'];
+export const FEATURE_TYPES = ['stair', 'terrace', 'furniture', 'label'];
 
-/** Plan features (stairs, terraces): normalised rectangles on the sheet. */
+/** Furniture kinds: name shown to the user and height of the 3D block (m). */
+export const FURNITURE = {
+  bed: { name: 'Cama', height: 0.5 },
+  sofa: { name: 'Sofá', height: 0.8 },
+  table: { name: 'Mesa', height: 0.75 },
+  counter: { name: 'Encimera', height: 0.9 },
+  bathtub: { name: 'Bañera', height: 0.55 },
+  small: { name: 'Mueble pequeño', height: 0.45 },
+  generic: { name: 'Mueble', height: 0.75 },
+};
+
+/**
+ * Plan features: normalised rectangles on the sheet. Stairs and terraces; furniture
+ * ({ kind, back? }); text labels ({ text? }: without text, the plan's own pixels).
+ */
 export function validateFeatures(features) {
   if (features == null) return;
-  if (!Array.isArray(features) || features.length > 200) throw Error('Elementos no válidos');
+  if (!Array.isArray(features) || features.length > 300) throw Error('Elementos no válidos');
   for (const f of features) {
     const inSheet = [f?.x, f?.y, f?.w, f?.h].every((n) => Number.isFinite(n) && n >= 0 && n <= 1);
     if (
@@ -173,6 +187,14 @@ export function validateFeatures(features) {
       if (!Number.isInteger(f.steps) || f.steps < 2 || f.steps > 60 || !['x', 'y'].includes(f.axis))
         throw Error('Escalera no válida');
     }
+    if (
+      f.type === 'furniture' &&
+      (!Object.hasOwn(FURNITURE, f.kind) ||
+        (f.back != null && !['n', 's', 'w', 'e'].includes(f.back)))
+    )
+      throw Error('Mueble no válido');
+    if (f.type === 'label' && f.text != null && (typeof f.text !== 'string' || f.text.length > 150))
+      throw Error('Texto no válido');
   }
 }
 
@@ -233,8 +255,29 @@ export function toDXF(walls, W, D, features = []) {
       '0',
     );
   for (const f of features) {
-    const layer = f.type === 'stair' ? 'ESCALERAS' : 'TERRAZAS',
-      [x0, y0, x1, y1] = [f.x, f.y, f.x + f.w, f.y + f.h];
+    const [x0, y0, x1, y1] = [f.x, f.y, f.x + f.w, f.y + f.h];
+    if (f.type === 'label') {
+      // Only read text can be written; unread labels stay in the plan image.
+      if (f.text)
+        lines.push(
+          '0',
+          'TEXT',
+          '8',
+          'TEXTOS',
+          '10',
+          String(x0 * W),
+          '20',
+          String((1 - y1) * D),
+          '30',
+          '0',
+          '40',
+          String(Math.max(0.1, f.h * D * 0.8)),
+          '1',
+          f.text.replace(/\s+/g, ' '),
+        );
+      continue;
+    }
+    const layer = { stair: 'ESCALERAS', terrace: 'TERRAZAS', furniture: 'MUEBLES' }[f.type];
     line(layer, x0, y0, x1, y0);
     line(layer, x1, y0, x1, y1);
     line(layer, x1, y1, x0, y1);

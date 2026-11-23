@@ -173,7 +173,9 @@ $('exportDXF').onclick = () => {
     new Blob([toDXF(state.walls, W(), D(), state.features)], { type: 'application/dxf' }),
     'plano-vivo.dxf',
   );
-  say('DXF exportado en metros: capas MUROS, PUERTAS, VENTANAS, ESCALERAS y TERRAZAS.');
+  say(
+    'DXF exportado en metros: capas MUROS, PUERTAS, VENTANAS, ESCALERAS, TERRAZAS, MUEBLES y TEXTOS.',
+  );
 };
 
 $('exportSVG').onclick = () => {

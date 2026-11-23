@@ -226,6 +226,8 @@ function summary(result) {
       n(s.windows, 'ventana', 'ventanas'),
       n(s.stairs, 'escalera', 'escaleras'),
       n(s.terraces, 'terraza', 'terrazas'),
+      n(s.furniture, 'mueble', 'muebles'),
+      n(s.labels, 'texto', 'textos'),
     ].filter(Boolean);
   return `Plano reconocido: ${parts.join(', ')}. Revisa los elementos resaltados en Vista dual.`;
 }
@@ -268,6 +270,7 @@ function constructInBrowser() {
       viewer.reset();
       setView('model');
       say(summary(result));
+      if (localEngine && result.engine === 'plan') readTexts(c, result);
     };
     state.worker.onerror = () => {
       stop();
@@ -280,6 +283,34 @@ function constructInBrowser() {
   } catch {
     setBusy(false);
     say('No se pudo iniciar el análisis en este navegador.');
+  }
+}
+
+/**
+ * With the local Python engine, read (OCR) the text areas found by the recogniser.
+ * Each area is read on its own, enlarged, so small room numbers can be read too.
+ * Areas it cannot read stay as the picture of the plan's text.
+ */
+async function readTexts(canvas, result) {
+  // The user may edit or rebuild while OCR runs: only apply to the same result.
+  const before = state.features,
+    labels = before.filter((f) => f.type === 'label');
+  if (!labels.length) return;
+  try {
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png')),
+      form = new FormData();
+    form.append('file', blob, 'plano.png');
+    form.append('boxes', JSON.stringify(labels.map((f) => [f.x, f.y, f.x + f.w, f.y + f.h])));
+    const response = await fetch('/api/ocr', { method: 'POST', body: form });
+    if (!response.ok) return;
+    const { texts } = await response.json();
+    if (!texts.length || state.features !== before) return;
+    const read = new Map(texts.map((t) => [labels[t.index], t.text]));
+    state.features = before.map((f) => (read.has(f) ? { ...f, text: read.get(f) } : f));
+    rebuild();
+    say(summary(result) + ` Textos leídos con OCR: ${texts.length} de ${labels.length}.`);
+  } catch {
+    // OCR is an extra: the model stands without it.
   }
 }
 

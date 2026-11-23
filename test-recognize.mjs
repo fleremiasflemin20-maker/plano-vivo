@@ -85,6 +85,13 @@ export function syntheticPlan(ppm) {
     line(x1, y1, x0, y1, 140);
     line(x0, y1, x0, y0, 140);
   }
+  // Room label "12" (0.35 m high) in the right room.
+  line(11.6, 3.95, 11.6, 4.3, 60, Math.max(1, ppm / 30));
+  line(11.75, 3.95, 11.95, 3.95, 60, Math.max(1, ppm / 30));
+  line(11.95, 3.95, 11.95, 4.12, 60, Math.max(1, ppm / 30));
+  line(11.95, 4.12, 11.75, 4.12, 60, Math.max(1, ppm / 30));
+  line(11.75, 4.12, 11.75, 4.3, 60, Math.max(1, ppm / 30));
+  line(11.75, 4.3, 11.95, 4.3, 60, Math.max(1, ppm / 30));
   // Terrace outside the left wall: 0.6 m paving grid.
   for (let y = 2; y <= 6.01; y += 0.6) line(0.4, y, 2.6, y, 150);
   for (let x = 0.4; x <= 2.61; x += 0.55) line(x, 2, x, 5.6, 150);
@@ -122,6 +129,11 @@ export function syntheticPlan(ppm) {
       ],
       stair: { x: 3.95, y: stairY0 + (treads * 0.28) / 2, steps: treads + 1 },
       terrace: { x: 1.5, y: 4 },
+      furniture: [
+        { kind: 'bed', x: 10.3, y: 2.6 },
+        { kind: 'table', x: 10.4, y: 6.6 },
+      ],
+      label: { x: 11.78, y: 4.12 },
       rooms: 3,
     },
   };
@@ -181,6 +193,19 @@ function check(ppm) {
   );
   assert.equal(terraces.length, 1, `${label}: ${terraces.length} terraces`);
   assert.ok(inside(terraces[0], truth.terrace), `${label}: terrace misplaced`);
+  const furniture = r.features.filter((f) => f.type === 'furniture');
+  assert.equal(furniture.length, truth.furniture.length, `${label}: ${furniture.length} furniture`);
+  for (const t of truth.furniture)
+    assert.ok(
+      furniture.some((f) => f.kind === t.kind && inside(f, t)),
+      `${label}: ${t.kind} not found`,
+    );
+  const labels = r.features.filter((f) => f.type === 'label');
+  assert.ok(
+    labels.some((f) => inside(f, truth.label)),
+    `${label}: room label not found`,
+  );
+  assert.ok(labels.length <= 2, `${label}: ${labels.length} labels`);
 
   // Rooms close: walls and openings form a connected graph.
   const T = 0.2,
@@ -194,9 +219,112 @@ function check(ppm) {
   console.log(`Recognition ${ppm} px/m:`, r.stats);
 }
 
+/**
+ * 10 × 8 m sheet: a room with a 45° chamfered corner and a 30° partition, plus the
+ * same scale bar. Diagonal walls must come out with their thickness and close rooms.
+ */
+export function diagonalPlan(ppm) {
+  const W = Math.round(10 * ppm),
+    H = Math.round(8 * ppm),
+    gray = new Uint8Array(W * H).fill(255);
+  // Thick segment (round caps) in metres.
+  const wall = (x0, y0, x1, y1, t, v = 0) => {
+    const r = (t / 2) * ppm,
+      ax = x0 * ppm,
+      ay = y0 * ppm,
+      bx = x1 * ppm,
+      by = y1 * ppm,
+      dx = bx - ax,
+      dy = by - ay,
+      len2 = dx * dx + dy * dy;
+    for (let y = Math.floor(Math.min(ay, by) - r); y <= Math.ceil(Math.max(ay, by) + r); y++)
+      for (let x = Math.floor(Math.min(ax, bx) - r); x <= Math.ceil(Math.max(ax, bx) + r); x++) {
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const s = Math.max(0, Math.min(1, ((x + 0.5 - ax) * dx + (y + 0.5 - ay) * dy) / len2)),
+          d = Math.hypot(x + 0.5 - ax - dx * s, y + 0.5 - ay - dy * s);
+        if (d <= r) gray[y * W + x] = v;
+      }
+  };
+  const T = 0.3;
+  wall(1, 1, 6, 1, T);
+  // Chamfer at 45° with a 0.9 m door in the middle.
+  const door = 0.45 / Math.SQRT2;
+  wall(6, 1, 7 - door, 2 - door, T);
+  wall(7 + door, 2 + door, 8, 3, T);
+  wall(8, 3, 8, 7, T);
+  wall(8, 7, 1, 7, T);
+  wall(1, 7, 1, 1, T);
+  // Partition at 30° from the left wall to the bottom wall.
+  wall(1, 5, 1 + 2 / Math.tan(Math.PI / 6), 7, 0.15, 30);
+  const bar = (a, b, top) => {
+    for (
+      let y = Math.round((top ? 7.5 : 7.57) * ppm);
+      y < Math.round((top ? 7.57 : 7.64) * ppm);
+      y++
+    )
+      for (let x = Math.round((0.5 + a) * ppm); x < Math.round((0.5 + b) * ppm); x++)
+        gray[y * W + x] = 20;
+  };
+  bar(0, 1, true);
+  bar(1, 2.5, false);
+  bar(2.5, 5, true);
+  const rgba = new Uint8ClampedArray(W * H * 4);
+  for (let i = 0; i < gray.length; i++) {
+    rgba[i * 4] = rgba[i * 4 + 1] = rgba[i * 4 + 2] = gray[i];
+    rgba[i * 4 + 3] = 255;
+  }
+  return {
+    rgba,
+    W,
+    H,
+    truth: { sheetWidth: 10, door: { x: 7, y: 2, width: 0.9 }, rooms: 2 },
+  };
+}
+
+function checkDiagonal(ppm) {
+  const { rgba, W, H, truth } = diagonalPlan(ppm),
+    r = recognizePlan(rgba, W, H),
+    label = `diagonal plan at ${ppm} px/m`;
+  assert.ok(r, `${label}: not recognised`);
+  const sheet = r.scale?.sheetWidth;
+  assert.ok(sheet && Math.abs(sheet - truth.sheetWidth) < 0.3, `${label}: scale ${sheet}`);
+  const depth = (sheet * H) / W,
+    m = (p) => ({ x: p.x * sheet, y: p.y * depth }),
+    diagonals = r.walls.filter((w) => {
+      const a = m(w.a),
+        b = m(w.b);
+      return w.type === 'wall' && Math.abs(a.x - b.x) > 0.3 && Math.abs(a.y - b.y) > 0.3;
+    });
+  assert.equal(diagonals.length, 3, `${label}: ${diagonals.length} diagonal walls`);
+  for (const d of diagonals) {
+    const t = d.thicknessRatio * sheet;
+    assert.ok(t > 0.1 && t < 0.38, `${label}: diagonal thickness ${t}`);
+  }
+  const door = r.walls.find((w) => {
+    const a = m(w.a),
+      b = m(w.b);
+    return (
+      w.type === 'door' &&
+      Math.hypot((a.x + b.x) / 2 - truth.door.x, (a.y + b.y) / 2 - truth.door.y) < 0.3
+    );
+  });
+  assert.ok(door, `${label}: door in the chamfer not found`);
+  const width = Math.hypot(m(door.a).x - m(door.b).x, m(door.a).y - m(door.b).y);
+  assert.ok(Math.abs(width - truth.door.width) < 0.3, `${label}: door width ${width}`);
+  const rooms = findRooms(
+    r.walls.map((w) => ({ ...w, thickness: w.thicknessRatio * sheet })),
+    sheet,
+    depth,
+    0.2,
+  );
+  assert.equal(rooms.length, truth.rooms, `${label}: ${rooms.length} rooms`);
+  console.log(`Diagonal ${ppm} px/m:`, r.stats);
+}
+
 // 35 px/m ≈ a 490 px wide web thumbnail (upscaled internally); 140 px/m ≈ a scan.
 export function runRecognitionTests() {
   for (const ppm of [35, 140]) check(ppm);
+  for (const ppm of [40, 120]) checkDiagonal(ppm);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
   runRecognitionTests();
