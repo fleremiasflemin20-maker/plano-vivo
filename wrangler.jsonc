@@ -1,0 +1,30 @@
+// Cloudflare Workers: publishes dist/ (the same site as GitHub Pages) and the
+// suggestions endpoint (worker/index.js → D1).
+//   Deploy:            npx wrangler deploy
+//   Read suggestions:  npx wrangler d1 execute plano-vivo-sugerencias --remote --command "SELECT * FROM sugerencias ORDER BY id DESC LIMIT 50"
+{
+  "name": "plano-vivo",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-11-23",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "plano-vivo-sugerencias",
+      "database_id": "0b0c37aa-2d00-44a9-a4a3-0bbae115f8af",
+      "migrations_dir": "migrations",
+    },
+  ],
+  // Five suggestions per minute per visitor.
+  "ratelimits": [
+    {
+      "name": "LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 5, "period": 60 },
+    },
+  ],
+}

@@ -23,7 +23,8 @@
           maxlength="80"
         /><span id="saveState">Guardado local</span>
       </div>
-      <button id="new">Nuevo plano</button><button id="save">Guardar proyecto</button
+      <button id="feedback" class="feedback">Sugerencias</button
+      ><button id="new">Nuevo plano</button><button id="save">Guardar proyecto</button
       ><button id="load">Abrir</button><input hidden id="json" type="file" accept=".json" />
     </header>
     <main>
@@ -31,6 +32,7 @@
         <div class="eyebrow">DEL PLANO AL ESPACIO</div>
         <h1>Imagina.<br />Dibuja. Construye.</h1>
         <p class="intro">De una imagen a un modelo, o de tu primera línea a un espacio.</p>
+        <button id="tour" class="tour">▶ Ver cómo funciona · 2 min</button>
         <label class="upload" for="file" tabindex="0" role="button"
           ><span class="upload-icon">＋</span><strong>Subir foto o plano</strong
           ><span>PNG, JPG, WEBP o PDF · hasta 20 MB</span></label
@@ -383,6 +385,77 @@
       </p>
       <div id="versionList"></div>
       <button id="closeVersions">Cerrar</button>
+    </dialog>
+    <dialog id="tourDialog">
+      <video
+        id="tourVideo"
+        controls
+        preload="none"
+        poster="media/plano-vivo-presentacion.jpg"
+        src="media/plano-vivo-presentacion.mp4"
+      >
+        <track
+          kind="subtitles"
+          srclang="es"
+          label="Español"
+          src="media/plano-vivo-presentacion.vtt"
+        />
+      </video>
+      <button id="closeTour">Cerrar</button>
+    </dialog>
+    <dialog id="feedbackDialog">
+      <h2>Ayúdanos a mejorar Plano Vivo</h2>
+      <form id="feedbackForm">
+        <p>
+          Cuéntanos qué te pareció, qué falló o qué te gustaría que hiciera. No necesitas cuenta.
+        </p>
+        <fieldset class="feedback-kind">
+          <legend>Tipo</legend>
+          <label><input type="radio" name="tipo" value="idea" checked /> Idea o mejora</label
+          ><label><input type="radio" name="tipo" value="error" /> Algo falló</label
+          ><label><input type="radio" name="tipo" value="opinion" /> Opinión</label>
+        </fieldset>
+        <label
+          >¿Qué tan útil te resulta?<select name="valoracion">
+            <option value="">Sin valorar</option>
+            <option value="5">5 · Muy útil</option>
+            <option value="4">4</option>
+            <option value="3">3</option>
+            <option value="2">2</option>
+            <option value="1">1 · Nada útil</option>
+          </select></label
+        >
+        <label
+          >Mensaje<textarea
+            id="feedbackMessage"
+            name="mensaje"
+            rows="5"
+            minlength="10"
+            maxlength="2000"
+            required
+            placeholder="Por ejemplo: subí un plano de mi casa y no reconoció la cocina…"
+          ></textarea>
+        </label>
+        <label
+          >Correo o contacto (opcional, solo si quieres respuesta)<input
+            name="contacto"
+            maxlength="120"
+            autocomplete="email"
+        /></label>
+        <label class="trap" aria-hidden="true"
+          >No llenar<input name="website" tabindex="-1" autocomplete="off"
+        /></label>
+        <p class="hint">
+          No incluyas datos personales en el mensaje. Los planos no se envían: solo este texto.
+        </p>
+        <p id="feedbackResult" role="status"></p>
+        <button type="button" id="feedbackCancel">Cancelar</button
+        ><button id="feedbackSend" class="primary">Enviar</button>
+      </form>
+      <div id="feedbackDone" hidden>
+        <p>¡Gracias! Leemos cada mensaje para decidir las próximas mejoras.</p>
+        <button id="feedbackClose" class="primary">Cerrar</button>
+      </div>
     </dialog>
     <script type="module" src="app.mjs"></script>
   </body>

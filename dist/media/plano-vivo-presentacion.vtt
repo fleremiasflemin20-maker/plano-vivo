@@ -1,0 +1,52 @@
+WEBVTT
+
+00:00.350 --> 00:09.880
+Esto es Plano Vivo: conviertes un plano en un modelo 3D que puedes recorrer, directamente en tu navegador. Es gratis y no tienes que instalar nada.
+
+00:10.591 --> 00:17.721
+Empieza subiendo una foto o un PDF de tu plano: una imagen de internet, un escaneo o una captura de pantalla.
+
+00:18.431 --> 00:32.421
+Pulsa Construir en 3D. Plano Vivo lee el plano: muros con su grosor, puertas con su lado de giro, ventanas, escaleras, terrazas, muebles y textos. Y saca la escala de la barra gráfica del plano.
+
+00:33.121 --> 00:39.841
+Arrastra para girar el modelo y usa la rueda para acercarte. Con Desde arriba ves la planta completa.
+
+00:41.216 --> 00:49.186
+En Vista dual comparas el plano con el modelo, lado a lado. Lo que propuso el reconocimiento queda resaltado para que lo revises.
+
+00:49.897 --> 00:58.707
+Ajusta el ancho del plano, la altura de los muros y su espesor. Si conoces una medida real, calibra la escala marcando dos puntos.
+
+00:59.416 --> 01:05.556
+Plano Vivo calcula la longitud y el área de los muros, el volumen y el área interior de cada recinto.
+
+01:06.258 --> 01:10.628
+Elige el acabado de las paredes y del piso para presentar tu proyecto.
+
+01:12.134 --> 01:19.694
+Inicia un recorrido y camina por dentro, a la altura de los ojos. Los muros te detienen, como en la realidad.
+
+01:20.403 --> 01:30.193
+También puedes dibujar desde cero: recintos rectangulares, paredes con dos clics, puertas y ventanas. El modelo 3D se actualiza mientras dibujas.
+
+01:40.640 --> 01:49.020
+Selecciona cualquier pared para cambiar su longitud, su ángulo, su altura o su espesor. Deshacer y rehacer siempre están a mano.
+
+01:49.898 --> 01:54.098
+Con la herramienta Medir obtienes la distancia real entre dos puntos.
+
+01:54.805 --> 01:59.655
+Reconoce también muros en diagonal, como un chaflán, con sus puertas.
+
+02:03.745 --> 02:12.335
+Tu trabajo se guarda solo en este navegador, con versiones que puedes recuperar. Guarda el proyecto como archivo para abrirlo en otro equipo.
+
+02:13.037 --> 02:22.017
+Exporta el plano en DXF o SVG para tu programa de CAD, el modelo 3D en GLB, las cantidades en CSV o una imagen del modelo.
+
+02:22.722 --> 02:34.262
+Para trabajo profesional, instala el motor local en tu computador: lee los vectores de los PDF, reconoce los textos y exporta en IFC para BIM. Tus planos no salen de tu equipo.
+
+02:34.966 --> 02:43.606
+Plano Vivo está en versión beta. Pruébalo con tus planos y dinos qué mejorar con el botón Sugerencias. No necesitas cuenta.

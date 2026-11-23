@@ -361,6 +361,80 @@ progress {
 #confirmDialog {
   max-width: 430px;
 }
+#feedbackDialog {
+  max-width: 480px;
+}
+#tourDialog {
+  width: min(960px, 94vw);
+  padding: 14px;
+}
+#tourDialog video {
+  width: 100%;
+  border-radius: 8px;
+  background: #123b2a;
+  display: block;
+  margin-bottom: 10px;
+}
+.tour {
+  margin: -4px 0 16px;
+  background: #e9f4ec;
+  border-color: #bcdcc6;
+  color: #246749;
+  font-weight: 600;
+}
+#feedbackForm label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  font-size: 13px;
+  color: #385c4b;
+}
+#feedbackForm textarea {
+  font: inherit;
+  padding: 10px;
+  border: 1px solid #d2e4d7;
+  border-radius: 8px;
+  resize: vertical;
+}
+#feedbackForm input:not([type='radio']) {
+  padding: 9px 10px;
+  border: 1px solid #d2e4d7;
+  border-radius: 8px;
+}
+.feedback-kind {
+  border: 0;
+  padding: 0;
+  margin: 12px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.feedback-kind legend {
+  font-size: 13px;
+  color: #385c4b;
+  margin-bottom: 6px;
+}
+#feedbackForm .feedback-kind label {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+#feedbackForm .trap {
+  position: absolute;
+  left: -9999px;
+}
+#feedbackResult {
+  min-height: 1.2em;
+  color: #9a4a2c;
+}
+header .feedback {
+  margin-left: auto;
+  background: #e9f4ec;
+  border-color: #bcdcc6;
+  color: #246749;
+}
 dialog p {
   line-height: 1.6;
   color: #688070;

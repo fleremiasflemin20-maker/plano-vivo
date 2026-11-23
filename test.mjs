@@ -4,6 +4,7 @@ import { deflateSync } from 'node:zlib';
 import { findRooms, quantities, validateProject, nearest, toDXF } from './dist/geometry.mjs';
 import { detectPlan, detectLargePlan } from './dist/detect.mjs';
 import { runRecognitionTests } from './test-recognize.mjs';
+import { runWorkerTests } from './test-worker.mjs';
 const wall = (x1, y1, x2, y2, type = 'wall') => ({
   a: { x: x1, y: y1 },
   b: { x: x2, y: y2 },
@@ -248,6 +249,7 @@ writeFileSync(
   ]),
 );
 runRecognitionTests();
+await runWorkerTests();
 console.log(
-  'Geometry, quantities, legacy import, DXF, blank image, reconstruction and plan recognition checks passed.',
+  'Geometry, quantities, legacy import, DXF, blank image, reconstruction, plan recognition and suggestions checks passed.',
 );

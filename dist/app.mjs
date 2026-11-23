@@ -5,6 +5,7 @@
 //   ui/model.mjs  rebuild (rooms, quantities, 3D), restore, demo project
 //   ui/build.mjs  image/PDF import and reconstruction (browser worker or Python engine)
 //   ui/files.mjs  save/open/new, local versions, exports
+//   ui/feedback.mjs  suggestions form (sent to the Cloudflare Worker)
 import * as storage from './storage.mjs';
 import {
   $,
@@ -22,6 +23,7 @@ import { draw, resetPlan, setTool, removeSelected, cancelPending } from './ui/pl
 import { rebuild, restore, renderModel, setView, demo } from './ui/model.mjs';
 import './ui/build.mjs';
 import './ui/files.mjs';
+import './ui/feedback.mjs';
 
 $('pythonPanel').hidden = !localEngine;
 $('exportIFC').hidden = !localEngine;
