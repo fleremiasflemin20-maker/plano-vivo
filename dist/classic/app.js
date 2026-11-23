@@ -1,35 +1,726 @@
 import * as THREE from '../vendor/three.js';
-const $=id=>document.getElementById(id), canvas=$('plan'),ctx=canvas.getContext('2d');
-let walls=[],history=[],bg=null,ratio=.75,tool='wall',start=null,hover=null,view='split',walking=false,scaleDistance=0;
-let fit={x:0,y:0,w:1,h:1},cw=0,ch=0;
-const say=s=>$('status').textContent=s;
-const width=()=>Number($('width').value),depth=()=>width()*ratio;
-function checkpoint(){history.push(JSON.stringify(walls));if(history.length>50)history.shift()}
-function demo(){checkpoint();bg=null;ratio=.75;$('width').value=12;walls=[[.08,.12,.92,.12],[.92,.12,.92,.88],[.92,.88,.58,.88],[.48,.88,.08,.88],[.08,.88,.08,.12],[.48,.12,.48,.44],[.48,.55,.48,.88],[.48,.5,.66,.5],[.75,.5,.92,.5],[.08,.53,.28,.53],[.37,.53,.48,.53]].map(a=>({a:{x:a[0],y:a[1]},b:{x:a[2],y:a[3]},type:'wall'}));walls.push({a:{x:.48,y:.44},b:{x:.48,y:.55},type:'door'},{a:{x:.28,y:.53},b:{x:.37,y:.53},type:'door'},{a:{x:.66,y:.5},b:{x:.75,y:.5},type:'door'},{a:{x:.48,y:.88},b:{x:.58,y:.88},type:'door'});$('filename').textContent='Vivienda de ejemplo · 12 × 9 m';rebuild();say('Ejemplo listo. Dibuja paredes o inicia el recorrido 3D.');}
-function point(e){const r=canvas.getBoundingClientRect();return {x:Math.max(0,Math.min(1,(e.clientX-r.left-fit.x)/fit.w)),y:Math.max(0,Math.min(1,(e.clientY-r.top-fit.y)/fit.h))}}
-function snap(p,e){if(e?.shiftKey&&start){if(Math.abs(p.x-start.x)>Math.abs(p.y-start.y))p.y=start.y;else p.x=start.x}return p}
-function draw(){const r=canvas.getBoundingClientRect();cw=r.width;ch=r.height;if(!cw||!ch)return;const dpr=window.devicePixelRatio||1;canvas.width=cw*dpr;canvas.height=ch*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cw,ch);ctx.strokeStyle='#eff3f0';ctx.lineWidth=1;for(let x=0;x<cw;x+=24){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,ch);ctx.stroke()}for(let y=0;y<ch;y+=24){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cw,y);ctx.stroke()}const w=Math.min(cw-44,(ch-170)/ratio),h=w*ratio;fit={x:(cw-w)/2,y:115+(ch-170-h)/2,w,h};if(bg){ctx.globalAlpha=.55;ctx.drawImage(bg,fit.x,fit.y,w,h);ctx.globalAlpha=1}else{ctx.fillStyle='#f0f5ef';ctx.fillRect(fit.x+w*.08,fit.y+h*.12,w*.84,h*.76)}for(const s of walls){ctx.beginPath();ctx.moveTo(fit.x+s.a.x*w,fit.y+s.a.y*h);ctx.lineTo(fit.x+s.b.x*w,fit.y+s.b.y*h);ctx.strokeStyle=s.type==='door'?'#b9905e':s.type==='window'?'#71a7ba':'#416b59';ctx.lineWidth=s.type==='wall'?Math.max(3,Number($('thickness').value)/width()*w):3;ctx.stroke();if(s.type==='door'){ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(fit.x+s.a.x*w,fit.y+s.a.y*h,Math.hypot((s.a.x-s.b.x)*w,(s.a.y-s.b.y)*h),0,-Math.PI/2,true);ctx.stroke();ctx.setLineDash([])}}if(start){ctx.fillStyle='#2c9668';ctx.beginPath();ctx.arc(fit.x+start.x*w,fit.y+start.y*h,5,0,Math.PI*2);ctx.fill();if(hover){ctx.strokeStyle='#2c9668';ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(fit.x+start.x*w,fit.y+start.y*h);ctx.lineTo(fit.x+hover.x*w,fit.y+hover.y*h);ctx.stroke();ctx.setLineDash([])}}ctx.fillStyle='#7b9587';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(width().toFixed(1)+' m',cw/2,fit.y+h+25);}
-function distance(p,s){const dx=s.b.x-s.a.x,dy=(s.b.y-s.a.y)*ratio,t=Math.max(0,Math.min(1,((p.x-s.a.x)*dx+(p.y-s.a.y)*ratio*dy)/(dx*dx+dy*dy)));return {d:Math.hypot(p.x-s.a.x-t*dx,(p.y-s.a.y)*ratio-t*dy),t}}
-canvas.addEventListener('pointermove',e=>{hover=snap(point(e),e);draw()});
-canvas.addEventListener('click',e=>{const p=snap(point(e),e);if(tool==='erase'){let best=-1,min=.035;walls.forEach((w,i)=>{const d=distance(p,w).d;if(d<min){min=d;best=i}});if(best>=0){checkpoint();walls.splice(best,1);rebuild()}return}if(tool==='door'||tool==='window'){let best=-1,min=.04,t=0;walls.forEach((w,i)=>{const d=distance(p,w);if(w.type==='wall'&&d.d<min){min=d.d;best=i;t=d.t}});if(best<0){say('Haz clic sobre una pared para insertar la abertura.');return}const s=walls[best],len=Math.hypot(s.b.x-s.a.x,(s.b.y-s.a.y)*ratio)*width(),size=tool==='door'?.9:1.2;if(len<size+.15){say('La pared es demasiado corta para esta abertura.');return}const half=size/len/2;t=Math.max(half,Math.min(1-half,t));const at=t=>({x:s.a.x+(s.b.x-s.a.x)*t,y:s.a.y+(s.b.y-s.a.y)*t});checkpoint();walls.splice(best,1,{a:s.a,b:at(t-half),type:'wall'},{a:at(t-half),b:at(t+half),type:tool},{a:at(t+half),b:s.b,type:'wall'});rebuild();return}if(!start){start=p;draw();return}if(Math.hypot((p.x-start.x)*width(),(p.y-start.y)*depth())<.05){start=null;draw();return}if(tool==='scale'){scaleDistance=Math.hypot(p.x-start.x,(p.y-start.y)*ratio);$('scaleDialog').showModal()}else{checkpoint();walls.push({a:start,b:p,type:'wall'});rebuild()}start=null;draw()});
-document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;start=null;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));$('planhelp').textContent=tool==='wall'?'Dos clics para una pared · Mayús alinea · Esc cancela':tool==='erase'?'Haz clic sobre un segmento para borrarlo':'Haz clic sobre una pared para colocar una '+(tool==='door'?'puerta':'ventana');draw()});
-$('undo').onclick=()=>{if(history.length){walls=JSON.parse(history.pop());rebuild()}};
-$('calibrate').onclick=()=>{tool='scale';start=null;setView('plan');say('Marca dos puntos cuya distancia real conozcas.');$('planhelp').textContent='Selecciona los extremos de una medida conocida'};
-$('scaleDialog').addEventListener('close',()=>{if($('scaleDialog').returnValue==='ok'){const n=Number($('known').value);if(n>0&&n/scaleDistance<=300){$('width').value=(n/scaleDistance).toFixed(3);rebuild();say('Escala calibrada.')}else say('La escala calculada supera el límite de 300 m.')}document.querySelector('[data-tool="wall"]').click()});
-const scene=new THREE.Scene();scene.background=new THREE.Color('#e8eeea');const camera=new THREE.PerspectiveCamera(45,1,.03,1000);let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;$('render').appendChild(renderer.domElement)}catch(e){say('No se pudo iniciar WebGL. Prueba con un navegador con aceleración gráfica.');throw e}scene.add(new THREE.HemisphereLight(0xffffff,0x9eafa1,2.4));const sun=new THREE.DirectionalLight(0xffffff,3);sun.position.set(12,20,10);scene.add(sun);const group=new THREE.Group();scene.add(group);let yaw=.65,pitch=.85,radius=18,walkPos=new THREE.Vector3(0,1.65,0),lookPitch=0;
-function box(w,h,d,x,y,z,mat,rotation=0){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);mesh.position.set(x,y,z);mesh.rotation.y=rotation;group.add(mesh);return mesh}
-function rebuild(){while(group.children.length){const o=group.children.pop();o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose()}const W=width(),D=depth(),H=Number($('height').value),T=Number($('thickness').value);const floor=new THREE.MeshStandardMaterial({color:0xd1d5c4,roughness:1});box(W,.12,D,0,-.06,0,floor);for(const s of walls){const dx=(s.b.x-s.a.x)*W,dz=(s.b.y-s.a.y)*D,L=Math.hypot(dx,dz);if(L<.005)continue;const x=(s.a.x+s.b.x-1)*W/2,z=(s.a.y+s.b.y-1)*D/2,rot=-Math.atan2(dz,dx);const mat=new THREE.MeshStandardMaterial({color:$('material').value,roughness:.88});if(s.type==='wall')box(L,H,T,x,H/2,z,mat,rot);else if(s.type==='door')box(L,Math.max(.1,H-2.1),T,x,2.1+(H-2.1)/2,z,mat,rot);else{box(L,.9,T,x,.45,z,mat,rot);box(L,H-2.1,T,x,2.1+(H-2.1)/2,z,mat.clone(),rot);box(L,1.2,.035,x,1.5,z,new THREE.MeshStandardMaterial({color:0x8dbac9,transparent:true,opacity:.4,roughness:.1}),rot)}}$('count').textContent=walls.filter(w=>w.type==='wall').length+' paredes';$('dimensions').textContent=W.toFixed(1)+' × '+D.toFixed(1)+' m';draw();resize();}
-function orbit(){camera.position.set(Math.sin(yaw)*Math.cos(pitch)*radius*Math.max(1,.85/camera.aspect),Math.sin(pitch)*radius*Math.max(1,.85/camera.aspect),Math.cos(yaw)*Math.cos(pitch)*radius*Math.max(1,.85/camera.aspect));camera.lookAt(0,.4,0)}
-function resize(){const r=$('render').getBoundingClientRect();if(r.width&&r.height){renderer.setSize(r.width,r.height);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}draw()}
+const $ = (id) => document.getElementById(id),
+  canvas = $('plan'),
+  ctx = canvas.getContext('2d');
+let walls = [],
+  history = [],
+  bg = null,
+  ratio = 0.75,
+  tool = 'wall',
+  start = null,
+  hover = null,
+  view = 'split',
+  walking = false,
+  scaleDistance = 0;
+let fit = { x: 0, y: 0, w: 1, h: 1 },
+  cw = 0,
+  ch = 0;
+const say = (s) => ($('status').textContent = s);
+const width = () => Number($('width').value),
+  depth = () => width() * ratio;
+function checkpoint() {
+  history.push(JSON.stringify(walls));
+  if (history.length > 50) history.shift();
+}
+function demo() {
+  checkpoint();
+  bg = null;
+  ratio = 0.75;
+  $('width').value = 12;
+  walls = [
+    [0.08, 0.12, 0.92, 0.12],
+    [0.92, 0.12, 0.92, 0.88],
+    [0.92, 0.88, 0.58, 0.88],
+    [0.48, 0.88, 0.08, 0.88],
+    [0.08, 0.88, 0.08, 0.12],
+    [0.48, 0.12, 0.48, 0.44],
+    [0.48, 0.55, 0.48, 0.88],
+    [0.48, 0.5, 0.66, 0.5],
+    [0.75, 0.5, 0.92, 0.5],
+    [0.08, 0.53, 0.28, 0.53],
+    [0.37, 0.53, 0.48, 0.53],
+  ].map((a) => ({ a: { x: a[0], y: a[1] }, b: { x: a[2], y: a[3] }, type: 'wall' }));
+  walls.push(
+    { a: { x: 0.48, y: 0.44 }, b: { x: 0.48, y: 0.55 }, type: 'door' },
+    { a: { x: 0.28, y: 0.53 }, b: { x: 0.37, y: 0.53 }, type: 'door' },
+    { a: { x: 0.66, y: 0.5 }, b: { x: 0.75, y: 0.5 }, type: 'door' },
+    { a: { x: 0.48, y: 0.88 }, b: { x: 0.58, y: 0.88 }, type: 'door' },
+  );
+  $('filename').textContent = 'Vivienda de ejemplo · 12 × 9 m';
+  rebuild();
+  say('Ejemplo listo. Dibuja paredes o inicia el recorrido 3D.');
+}
+function point(e) {
+  const r = canvas.getBoundingClientRect();
+  return {
+    x: Math.max(0, Math.min(1, (e.clientX - r.left - fit.x) / fit.w)),
+    y: Math.max(0, Math.min(1, (e.clientY - r.top - fit.y) / fit.h)),
+  };
+}
+function snap(p, e) {
+  if (e?.shiftKey && start) {
+    if (Math.abs(p.x - start.x) > Math.abs(p.y - start.y)) p.y = start.y;
+    else p.x = start.x;
+  }
+  return p;
+}
+function draw() {
+  const r = canvas.getBoundingClientRect();
+  cw = r.width;
+  ch = r.height;
+  if (!cw || !ch) return;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = cw * dpr;
+  canvas.height = ch * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cw, ch);
+  ctx.strokeStyle = '#eff3f0';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < cw; x += 24) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, ch);
+    ctx.stroke();
+  }
+  for (let y = 0; y < ch; y += 24) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(cw, y);
+    ctx.stroke();
+  }
+  const w = Math.min(cw - 44, (ch - 170) / ratio),
+    h = w * ratio;
+  fit = { x: (cw - w) / 2, y: 115 + (ch - 170 - h) / 2, w, h };
+  if (bg) {
+    ctx.globalAlpha = 0.55;
+    ctx.drawImage(bg, fit.x, fit.y, w, h);
+    ctx.globalAlpha = 1;
+  } else {
+    ctx.fillStyle = '#f0f5ef';
+    ctx.fillRect(fit.x + w * 0.08, fit.y + h * 0.12, w * 0.84, h * 0.76);
+  }
+  for (const s of walls) {
+    ctx.beginPath();
+    ctx.moveTo(fit.x + s.a.x * w, fit.y + s.a.y * h);
+    ctx.lineTo(fit.x + s.b.x * w, fit.y + s.b.y * h);
+    ctx.strokeStyle = s.type === 'door' ? '#b9905e' : s.type === 'window' ? '#71a7ba' : '#416b59';
+    ctx.lineWidth =
+      s.type === 'wall' ? Math.max(3, (Number($('thickness').value) / width()) * w) : 3;
+    ctx.stroke();
+    if (s.type === 'door') {
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(
+        fit.x + s.a.x * w,
+        fit.y + s.a.y * h,
+        Math.hypot((s.a.x - s.b.x) * w, (s.a.y - s.b.y) * h),
+        0,
+        -Math.PI / 2,
+        true,
+      );
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  if (start) {
+    ctx.fillStyle = '#2c9668';
+    ctx.beginPath();
+    ctx.arc(fit.x + start.x * w, fit.y + start.y * h, 5, 0, Math.PI * 2);
+    ctx.fill();
+    if (hover) {
+      ctx.strokeStyle = '#2c9668';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(fit.x + start.x * w, fit.y + start.y * h);
+      ctx.lineTo(fit.x + hover.x * w, fit.y + hover.y * h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  ctx.fillStyle = '#7b9587';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(width().toFixed(1) + ' m', cw / 2, fit.y + h + 25);
+}
+function distance(p, s) {
+  const dx = s.b.x - s.a.x,
+    dy = (s.b.y - s.a.y) * ratio,
+    t = Math.max(
+      0,
+      Math.min(1, ((p.x - s.a.x) * dx + (p.y - s.a.y) * ratio * dy) / (dx * dx + dy * dy)),
+    );
+  return { d: Math.hypot(p.x - s.a.x - t * dx, (p.y - s.a.y) * ratio - t * dy), t };
+}
+canvas.addEventListener('pointermove', (e) => {
+  hover = snap(point(e), e);
+  draw();
+});
+canvas.addEventListener('click', (e) => {
+  const p = snap(point(e), e);
+  if (tool === 'erase') {
+    let best = -1,
+      min = 0.035;
+    walls.forEach((w, i) => {
+      const d = distance(p, w).d;
+      if (d < min) {
+        min = d;
+        best = i;
+      }
+    });
+    if (best >= 0) {
+      checkpoint();
+      walls.splice(best, 1);
+      rebuild();
+    }
+    return;
+  }
+  if (tool === 'door' || tool === 'window') {
+    let best = -1,
+      min = 0.04,
+      t = 0;
+    walls.forEach((w, i) => {
+      const d = distance(p, w);
+      if (w.type === 'wall' && d.d < min) {
+        min = d.d;
+        best = i;
+        t = d.t;
+      }
+    });
+    if (best < 0) {
+      say('Haz clic sobre una pared para insertar la abertura.');
+      return;
+    }
+    const s = walls[best],
+      len = Math.hypot(s.b.x - s.a.x, (s.b.y - s.a.y) * ratio) * width(),
+      size = tool === 'door' ? 0.9 : 1.2;
+    if (len < size + 0.15) {
+      say('La pared es demasiado corta para esta abertura.');
+      return;
+    }
+    const half = size / len / 2;
+    t = Math.max(half, Math.min(1 - half, t));
+    const at = (t) => ({ x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t });
+    checkpoint();
+    walls.splice(
+      best,
+      1,
+      { a: s.a, b: at(t - half), type: 'wall' },
+      { a: at(t - half), b: at(t + half), type: tool },
+      { a: at(t + half), b: s.b, type: 'wall' },
+    );
+    rebuild();
+    return;
+  }
+  if (!start) {
+    start = p;
+    draw();
+    return;
+  }
+  if (Math.hypot((p.x - start.x) * width(), (p.y - start.y) * depth()) < 0.05) {
+    start = null;
+    draw();
+    return;
+  }
+  if (tool === 'scale') {
+    scaleDistance = Math.hypot(p.x - start.x, (p.y - start.y) * ratio);
+    $('scaleDialog').showModal();
+  } else {
+    checkpoint();
+    walls.push({ a: start, b: p, type: 'wall' });
+    rebuild();
+  }
+  start = null;
+  draw();
+});
+document.querySelectorAll('[data-tool]').forEach(
+  (b) =>
+    (b.onclick = () => {
+      tool = b.dataset.tool;
+      start = null;
+      document
+        .querySelectorAll('[data-tool]')
+        .forEach((x) => x.classList.toggle('active', x === b));
+      $('planhelp').textContent =
+        tool === 'wall'
+          ? 'Dos clics para una pared · Mayús alinea · Esc cancela'
+          : tool === 'erase'
+            ? 'Haz clic sobre un segmento para borrarlo'
+            : 'Haz clic sobre una pared para colocar una ' +
+              (tool === 'door' ? 'puerta' : 'ventana');
+      draw();
+    }),
+);
+$('undo').onclick = () => {
+  if (history.length) {
+    walls = JSON.parse(history.pop());
+    rebuild();
+  }
+};
+$('calibrate').onclick = () => {
+  tool = 'scale';
+  start = null;
+  setView('plan');
+  say('Marca dos puntos cuya distancia real conozcas.');
+  $('planhelp').textContent = 'Selecciona los extremos de una medida conocida';
+};
+$('scaleDialog').addEventListener('close', () => {
+  if ($('scaleDialog').returnValue === 'ok') {
+    const n = Number($('known').value);
+    if (n > 0 && n / scaleDistance <= 300) {
+      $('width').value = (n / scaleDistance).toFixed(3);
+      rebuild();
+      say('Escala calibrada.');
+    } else say('La escala calculada supera el límite de 300 m.');
+  }
+  document.querySelector('[data-tool="wall"]').click();
+});
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#e8eeea');
+const camera = new THREE.PerspectiveCamera(45, 1, 0.03, 1000);
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  $('render').appendChild(renderer.domElement);
+} catch (e) {
+  say('No se pudo iniciar WebGL. Prueba con un navegador con aceleración gráfica.');
+  throw e;
+}
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9eafa1, 2.4));
+const sun = new THREE.DirectionalLight(0xffffff, 3);
+sun.position.set(12, 20, 10);
+scene.add(sun);
+const group = new THREE.Group();
+scene.add(group);
+let yaw = 0.65,
+  pitch = 0.85,
+  radius = 18,
+  walkPos = new THREE.Vector3(0, 1.65, 0),
+  lookPitch = 0;
+function box(w, h, d, x, y, z, mat, rotation = 0) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  mesh.position.set(x, y, z);
+  mesh.rotation.y = rotation;
+  group.add(mesh);
+  return mesh;
+}
+function rebuild() {
+  while (group.children.length) {
+    const o = group.children.pop();
+    o.geometry?.dispose();
+    if (Array.isArray(o.material)) o.material.forEach((m) => m.dispose());
+    else o.material?.dispose();
+  }
+  const W = width(),
+    D = depth(),
+    H = Number($('height').value),
+    T = Number($('thickness').value);
+  const floor = new THREE.MeshStandardMaterial({ color: 0xd1d5c4, roughness: 1 });
+  box(W, 0.12, D, 0, -0.06, 0, floor);
+  for (const s of walls) {
+    const dx = (s.b.x - s.a.x) * W,
+      dz = (s.b.y - s.a.y) * D,
+      L = Math.hypot(dx, dz);
+    if (L < 0.005) continue;
+    const x = ((s.a.x + s.b.x - 1) * W) / 2,
+      z = ((s.a.y + s.b.y - 1) * D) / 2,
+      rot = -Math.atan2(dz, dx);
+    const mat = new THREE.MeshStandardMaterial({ color: $('material').value, roughness: 0.88 });
+    if (s.type === 'wall') box(L, H, T, x, H / 2, z, mat, rot);
+    else if (s.type === 'door')
+      box(L, Math.max(0.1, H - 2.1), T, x, 2.1 + (H - 2.1) / 2, z, mat, rot);
+    else {
+      box(L, 0.9, T, x, 0.45, z, mat, rot);
+      box(L, H - 2.1, T, x, 2.1 + (H - 2.1) / 2, z, mat.clone(), rot);
+      box(
+        L,
+        1.2,
+        0.035,
+        x,
+        1.5,
+        z,
+        new THREE.MeshStandardMaterial({
+          color: 0x8dbac9,
+          transparent: true,
+          opacity: 0.4,
+          roughness: 0.1,
+        }),
+        rot,
+      );
+    }
+  }
+  $('count').textContent = walls.filter((w) => w.type === 'wall').length + ' paredes';
+  $('dimensions').textContent = W.toFixed(1) + ' × ' + D.toFixed(1) + ' m';
+  draw();
+  resize();
+}
+function orbit() {
+  camera.position.set(
+    Math.sin(yaw) * Math.cos(pitch) * radius * Math.max(1, 0.85 / camera.aspect),
+    Math.sin(pitch) * radius * Math.max(1, 0.85 / camera.aspect),
+    Math.cos(yaw) * Math.cos(pitch) * radius * Math.max(1, 0.85 / camera.aspect),
+  );
+  camera.lookAt(0, 0.4, 0);
+}
+function resize() {
+  const r = $('render').getBoundingClientRect();
+  if (r.width && r.height) {
+    renderer.setSize(r.width, r.height);
+    camera.aspect = r.width / r.height;
+    camera.updateProjectionMatrix();
+  }
+  draw();
+}
 new ResizeObserver(resize).observe($('workspace'));
-let drag=null;renderer.domElement.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;yaw-=dx*.006;if(walking)lookPitch=Math.max(-1.3,Math.min(1.3,lookPitch-dy*.005));else pitch=Math.max(.12,Math.min(1.5,pitch+dy*.006));drag={x:e.clientX,y:e.clientY}});renderer.domElement.addEventListener('pointerup',()=>drag=null);renderer.domElement.addEventListener('pointercancel',()=>drag=null);renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();if(!walking)radius=Math.max(3,Math.min(500,radius*Math.exp(e.deltaY*.001)))},{passive:false});
-function setView(v){view=v;$('workspace').className=v;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));requestAnimationFrame(resize)}document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
-function resetCam(){walking=false;$('movement').hidden=true;$('modebadge').textContent='PERSPECTIVA';$('modelhelp').textContent='Arrastra para girar · Rueda para acercarte';radius=Math.max(width(),depth())*1.6;yaw=.65;pitch=.85}
-$('resetcam').onclick=resetCam;$('exitwalk').onclick=resetCam;
-function blocked(x,z){const W=width(),D=depth();if(Math.abs(x)>W/2||Math.abs(z)>D/2)return true;return walls.some(s=>s.type!=='door'&&distance({x:x/W+.5,y:z/D+.5},s).d*W<Number($('thickness').value)/2+.17)}
-$('walk').onclick=()=>{if(!walls.length){say('Añade paredes antes de iniciar el recorrido.');return}let found=false;for(let y=.5;y<.95&&!found;y+=.05)for(let x=.5;x<.95&&!found;x+=.05)if(!blocked((x-.5)*width(),(y-.5)*depth())){walkPos.set((x-.5)*width(),1.65,(y-.5)*depth());found=true}if(!found){say('No se encontró un punto libre para iniciar. Revisa las paredes.');return}walking=true;yaw=0;lookPitch=0;setView('model');$('movement').hidden=false;$('modebadge').textContent='RECORRIDO';$('modelhelp').textContent='WASD o flechas para caminar · Arrastra para mirar · Esc para salir';say('Recorrido activo. Puedes cruzar las puertas; las paredes bloquean el paso.');};
-const keys={};window.addEventListener('keydown',e=>{if(e.target.matches('input,select'))return;if(e.key==='Escape'){start=null;resetCam();draw()}keys[e.key.toLowerCase()]=true;if(walking&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault()});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);window.addEventListener('blur',()=>Object.keys(keys).forEach(k=>keys[k]=false));document.querySelectorAll('[data-move]').forEach(b=>{b.onpointerdown=e=>{keys[b.dataset.move]=true;b.setPointerCapture(e.pointerId)};b.onpointerup=b.onpointercancel=()=>keys[b.dataset.move]=false});let last=performance.now();function animate(t){requestAnimationFrame(animate);const dt=Math.min(.05,(t-last)/1000);last=t;if(walking){const f=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0),s=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),step=2.2*dt/Math.max(1,Math.hypot(f,s)),dx=(-Math.sin(yaw)*f+Math.cos(yaw)*s)*step,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*s)*step;if(!blocked(walkPos.x+dx,walkPos.z))walkPos.x+=dx;if(!blocked(walkPos.x,walkPos.z+dz))walkPos.z+=dz;camera.position.copy(walkPos);camera.lookAt(walkPos.x-Math.sin(yaw)*Math.cos(lookPitch),walkPos.y+Math.sin(lookPitch),walkPos.z-Math.cos(yaw)*Math.cos(lookPitch))}else orbit();renderer.render(scene,camera)}requestAnimationFrame(animate);
-['width','height','thickness','material'].forEach(id=>$(id).addEventListener('change',()=>{const el=$(id);if(el.type==='number'&&(!Number.isFinite(Number(el.value))||Number(el.value)<Number(el.min)||Number(el.value)>Number(el.max))){el.value=id==='width'?12:id==='height'?2.8:.18;say('Valor fuera de rango; se restauró un valor válido.')}resetCam();rebuild()}));
-async function importFile(file){if(!file)return;if(file.size>20*1024*1024){say('El archivo supera los 20 MB.');return}say('Abriendo plano…');try{let src;if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){const pdfjs=await import('../vendor/pdf.mjs');pdfjs.GlobalWorkerOptions.workerSrc='../vendor/pdf.worker.mjs';const pdf=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;const page=await pdf.getPage(1),base=page.getViewport({scale:1}),viewport=page.getViewport({scale:Math.min(2,1800/Math.max(base.width,base.height))}),c=document.createElement('canvas');c.width=viewport.width;c.height=viewport.height;await page.render({canvasContext:c.getContext('2d'),viewport}).promise;src=c.toDataURL();await pdf.destroy()}else{src=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(file)})}const img=new Image();img.src=src;await img.decode();const c=document.createElement('canvas'),factor=Math.min(1,1800/Math.max(img.width,img.height));c.width=img.width*factor;c.height=img.height*factor;c.getContext('2d').drawImage(img,0,0,c.width,c.height);const normalized=new Image();normalized.src=c.toDataURL('image/png');await normalized.decode();bg=normalized;ratio=bg.height/bg.width;walls=[];history=[];start=null;resetCam();$('filename').textContent=file.name+(file.type==='application/pdf'?' · página 1':'');rebuild();say('Plano cargado. Calibra la escala y pulsa Detectar paredes, o dibújalas sobre la imagen.')}catch(e){say('No se pudo abrir el archivo. Usa una imagen PNG/JPG o un PDF sin contraseña.')}}$('file').onchange=e=>importFile(e.target.files[0]);
-$('detect').onclick=()=>{if(!bg){say('Primero sube una imagen o un PDF para detectar sus paredes.');return}const c=document.createElement('canvas'),f=Math.min(1,800/bg.width);c.width=Math.round(bg.width*f);c.height=Math.round(bg.height*f);const g=c.getContext('2d',{willReadFrequently:true});g.fillStyle='white';g.fillRect(0,0,c.width,c.height);g.drawImage(bg,0,0,c.width,c.height);const {data}=g.getImageData(0,0,c.width,c.height),W=c.width,H=c.height;const dark=(x,y)=>{const i=(y*W+x)*4;return data[i]*.299+data[i+1]*.587+data[i+2]*.114<105};const candidates=[];for(const vertical of [false,true]){const outer=vertical?W:H,inner=vertical?H:W,min=Math.max(25,inner*.065);for(let a=0;a<outer;a+=2){let begin=-1,gap=0;for(let b=0;b<=inner;b++){const hit=b<inner&&dark(vertical?a:b,vertical?b:a);if(hit){if(begin<0)begin=b;gap=0}else if(begin>=0){gap++;if(gap>2||b===inner){const end=b-gap;if(end-begin>=min){const existing=candidates.find(s=>s.v===vertical&&Math.abs(s.a-a)<12&&Math.abs(s.start-begin)<18&&Math.abs(s.end-end)<18);if(existing){existing.a=(existing.a+a)/2;existing.start=Math.min(existing.start,begin);existing.end=Math.max(existing.end,end)}else candidates.push({v:vertical,a,start:begin,end})}begin=-1;gap=0}}}}}const detected=candidates.slice(0,350).map(s=>({a:{x:(s.v?s.a:s.start)/W,y:(s.v?s.start:s.a)/H},b:{x:(s.v?s.a:s.end)/W,y:(s.v?s.end:s.a)/H},type:'wall'}));if(!detected.length){say('No se encontraron líneas claras. Usa Pared para trazarlas manualmente.');return}checkpoint();walls=detected;rebuild();say('Se detectaron '+walls.length+' segmentos. Revisa textos y líneas duplicadas con Borrar; añade puertas y ventanas manualmente.');};
-$('save').onclick=()=>{const data={version:1,width:width(),height:Number($('height').value),thickness:Number($('thickness').value),material:$('material').value,ratio,walls,image:bg?.src||null};const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='plano-vivo.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);say('Proyecto descargado. Usa Abrir proyecto para continuar después.');};$('load').onclick=()=>$('json').click();$('json').onchange=async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>30*1024*1024)throw Error();const d=JSON.parse(await file.text());if(d.version!==1||!Array.isArray(d.walls)||d.walls.length>2000||!(d.width>=1&&d.width<=300&&d.height>=2&&d.height<=12&&d.thickness>=.05&&d.thickness<=1&&d.ratio>.02&&d.ratio<50)||!/^#[0-9a-f]{6}$/i.test(d.material)||d.walls.some(w=>!['wall','door','window'].includes(w.type)||![w.a?.x,w.a?.y,w.b?.x,w.b?.y].every(n=>Number.isFinite(n)&&n>=0&&n<=1)))throw Error();let img=null;if(d.image){if(!d.image.startsWith('data:image/png;base64,'))throw Error();img=new Image();img.src=d.image;await img.decode()}walls=d.walls;bg=img;ratio=d.ratio;history=[];start=null;['width','height','thickness','material'].forEach(k=>$(k).value=d[k]);$('filename').textContent=file.name;resetCam();rebuild();say('Proyecto restaurado.')}catch{say('El archivo no es un proyecto válido de Plano Vivo.')}};$('demo').onclick=()=>{demo();resetCam()};demo();resetCam();
+let drag = null;
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  drag = { x: e.clientX, y: e.clientY };
+  renderer.domElement.setPointerCapture(e.pointerId);
+});
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x,
+    dy = e.clientY - drag.y;
+  yaw -= dx * 0.006;
+  if (walking) lookPitch = Math.max(-1.3, Math.min(1.3, lookPitch - dy * 0.005));
+  else pitch = Math.max(0.12, Math.min(1.5, pitch + dy * 0.006));
+  drag = { x: e.clientX, y: e.clientY };
+});
+renderer.domElement.addEventListener('pointerup', () => (drag = null));
+renderer.domElement.addEventListener('pointercancel', () => (drag = null));
+renderer.domElement.addEventListener(
+  'wheel',
+  (e) => {
+    e.preventDefault();
+    if (!walking) radius = Math.max(3, Math.min(500, radius * Math.exp(e.deltaY * 0.001)));
+  },
+  { passive: false },
+);
+function setView(v) {
+  view = v;
+  $('workspace').className = v;
+  document
+    .querySelectorAll('[data-view]')
+    .forEach((b) => b.classList.toggle('active', b.dataset.view === v));
+  requestAnimationFrame(resize);
+}
+document
+  .querySelectorAll('[data-view]')
+  .forEach((b) => (b.onclick = () => setView(b.dataset.view)));
+function resetCam() {
+  walking = false;
+  $('movement').hidden = true;
+  $('modebadge').textContent = 'PERSPECTIVA';
+  $('modelhelp').textContent = 'Arrastra para girar · Rueda para acercarte';
+  radius = Math.max(width(), depth()) * 1.6;
+  yaw = 0.65;
+  pitch = 0.85;
+}
+$('resetcam').onclick = resetCam;
+$('exitwalk').onclick = resetCam;
+function blocked(x, z) {
+  const W = width(),
+    D = depth();
+  if (Math.abs(x) > W / 2 || Math.abs(z) > D / 2) return true;
+  return walls.some(
+    (s) =>
+      s.type !== 'door' &&
+      distance({ x: x / W + 0.5, y: z / D + 0.5 }, s).d * W <
+        Number($('thickness').value) / 2 + 0.17,
+  );
+}
+$('walk').onclick = () => {
+  if (!walls.length) {
+    say('Añade paredes antes de iniciar el recorrido.');
+    return;
+  }
+  let found = false;
+  for (let y = 0.5; y < 0.95 && !found; y += 0.05)
+    for (let x = 0.5; x < 0.95 && !found; x += 0.05)
+      if (!blocked((x - 0.5) * width(), (y - 0.5) * depth())) {
+        walkPos.set((x - 0.5) * width(), 1.65, (y - 0.5) * depth());
+        found = true;
+      }
+  if (!found) {
+    say('No se encontró un punto libre para iniciar. Revisa las paredes.');
+    return;
+  }
+  walking = true;
+  yaw = 0;
+  lookPitch = 0;
+  setView('model');
+  $('movement').hidden = false;
+  $('modebadge').textContent = 'RECORRIDO';
+  $('modelhelp').textContent = 'WASD o flechas para caminar · Arrastra para mirar · Esc para salir';
+  say('Recorrido activo. Puedes cruzar las puertas; las paredes bloquean el paso.');
+};
+const keys = {};
+window.addEventListener('keydown', (e) => {
+  if (e.target.matches('input,select')) return;
+  if (e.key === 'Escape') {
+    start = null;
+    resetCam();
+    draw();
+  }
+  keys[e.key.toLowerCase()] = true;
+  if (walking && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key))
+    e.preventDefault();
+});
+window.addEventListener('keyup', (e) => (keys[e.key.toLowerCase()] = false));
+window.addEventListener('blur', () => Object.keys(keys).forEach((k) => (keys[k] = false)));
+document.querySelectorAll('[data-move]').forEach((b) => {
+  b.onpointerdown = (e) => {
+    keys[b.dataset.move] = true;
+    b.setPointerCapture(e.pointerId);
+  };
+  b.onpointerup = b.onpointercancel = () => (keys[b.dataset.move] = false);
+});
+let last = performance.now();
+function animate(t) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.05, (t - last) / 1000);
+  last = t;
+  if (walking) {
+    const f = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0),
+      s = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0),
+      step = (2.2 * dt) / Math.max(1, Math.hypot(f, s)),
+      dx = (-Math.sin(yaw) * f + Math.cos(yaw) * s) * step,
+      dz = (-Math.cos(yaw) * f - Math.sin(yaw) * s) * step;
+    if (!blocked(walkPos.x + dx, walkPos.z)) walkPos.x += dx;
+    if (!blocked(walkPos.x, walkPos.z + dz)) walkPos.z += dz;
+    camera.position.copy(walkPos);
+    camera.lookAt(
+      walkPos.x - Math.sin(yaw) * Math.cos(lookPitch),
+      walkPos.y + Math.sin(lookPitch),
+      walkPos.z - Math.cos(yaw) * Math.cos(lookPitch),
+    );
+  } else orbit();
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+['width', 'height', 'thickness', 'material'].forEach((id) =>
+  $(id).addEventListener('change', () => {
+    const el = $(id);
+    if (
+      el.type === 'number' &&
+      (!Number.isFinite(Number(el.value)) ||
+        Number(el.value) < Number(el.min) ||
+        Number(el.value) > Number(el.max))
+    ) {
+      el.value = id === 'width' ? 12 : id === 'height' ? 2.8 : 0.18;
+      say('Valor fuera de rango; se restauró un valor válido.');
+    }
+    resetCam();
+    rebuild();
+  }),
+);
+async function importFile(file) {
+  if (!file) return;
+  if (file.size > 20 * 1024 * 1024) {
+    say('El archivo supera los 20 MB.');
+    return;
+  }
+  say('Abriendo plano…');
+  try {
+    let src;
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      const pdfjs = await import('../vendor/pdf.mjs');
+      pdfjs.GlobalWorkerOptions.workerSrc = '../vendor/pdf.worker.mjs';
+      const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+      const page = await pdf.getPage(1),
+        base = page.getViewport({ scale: 1 }),
+        viewport = page.getViewport({
+          scale: Math.min(2, 1800 / Math.max(base.width, base.height)),
+        }),
+        c = document.createElement('canvas');
+      c.width = viewport.width;
+      c.height = viewport.height;
+      await page.render({ canvasContext: c.getContext('2d'), viewport }).promise;
+      src = c.toDataURL();
+      await pdf.destroy();
+    } else {
+      src = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result);
+        fr.onerror = rej;
+        fr.readAsDataURL(file);
+      });
+    }
+    const img = new Image();
+    img.src = src;
+    await img.decode();
+    const c = document.createElement('canvas'),
+      factor = Math.min(1, 1800 / Math.max(img.width, img.height));
+    c.width = img.width * factor;
+    c.height = img.height * factor;
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const normalized = new Image();
+    normalized.src = c.toDataURL('image/png');
+    await normalized.decode();
+    bg = normalized;
+    ratio = bg.height / bg.width;
+    walls = [];
+    history = [];
+    start = null;
+    resetCam();
+    $('filename').textContent = file.name + (file.type === 'application/pdf' ? ' · página 1' : '');
+    rebuild();
+    say('Plano cargado. Calibra la escala y pulsa Detectar paredes, o dibújalas sobre la imagen.');
+  } catch (e) {
+    say('No se pudo abrir el archivo. Usa una imagen PNG/JPG o un PDF sin contraseña.');
+  }
+}
+$('file').onchange = (e) => importFile(e.target.files[0]);
+$('detect').onclick = () => {
+  if (!bg) {
+    say('Primero sube una imagen o un PDF para detectar sus paredes.');
+    return;
+  }
+  const c = document.createElement('canvas'),
+    f = Math.min(1, 800 / bg.width);
+  c.width = Math.round(bg.width * f);
+  c.height = Math.round(bg.height * f);
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.fillStyle = 'white';
+  g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(bg, 0, 0, c.width, c.height);
+  const { data } = g.getImageData(0, 0, c.width, c.height),
+    W = c.width,
+    H = c.height;
+  const dark = (x, y) => {
+    const i = (y * W + x) * 4;
+    return data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114 < 105;
+  };
+  const candidates = [];
+  for (const vertical of [false, true]) {
+    const outer = vertical ? W : H,
+      inner = vertical ? H : W,
+      min = Math.max(25, inner * 0.065);
+    for (let a = 0; a < outer; a += 2) {
+      let begin = -1,
+        gap = 0;
+      for (let b = 0; b <= inner; b++) {
+        const hit = b < inner && dark(vertical ? a : b, vertical ? b : a);
+        if (hit) {
+          if (begin < 0) begin = b;
+          gap = 0;
+        } else if (begin >= 0) {
+          gap++;
+          if (gap > 2 || b === inner) {
+            const end = b - gap;
+            if (end - begin >= min) {
+              const existing = candidates.find(
+                (s) =>
+                  s.v === vertical &&
+                  Math.abs(s.a - a) < 12 &&
+                  Math.abs(s.start - begin) < 18 &&
+                  Math.abs(s.end - end) < 18,
+              );
+              if (existing) {
+                existing.a = (existing.a + a) / 2;
+                existing.start = Math.min(existing.start, begin);
+                existing.end = Math.max(existing.end, end);
+              } else candidates.push({ v: vertical, a, start: begin, end });
+            }
+            begin = -1;
+            gap = 0;
+          }
+        }
+      }
+    }
+  }
+  const detected = candidates.slice(0, 350).map((s) => ({
+    a: { x: (s.v ? s.a : s.start) / W, y: (s.v ? s.start : s.a) / H },
+    b: { x: (s.v ? s.a : s.end) / W, y: (s.v ? s.end : s.a) / H },
+    type: 'wall',
+  }));
+  if (!detected.length) {
+    say('No se encontraron líneas claras. Usa Pared para trazarlas manualmente.');
+    return;
+  }
+  checkpoint();
+  walls = detected;
+  rebuild();
+  say(
+    'Se detectaron ' +
+      walls.length +
+      ' segmentos. Revisa textos y líneas duplicadas con Borrar; añade puertas y ventanas manualmente.',
+  );
+};
+$('save').onclick = () => {
+  const data = {
+    version: 1,
+    width: width(),
+    height: Number($('height').value),
+    thickness: Number($('thickness').value),
+    material: $('material').value,
+    ratio,
+    walls,
+    image: bg?.src || null,
+  };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' })),
+    a = document.createElement('a');
+  a.href = url;
+  a.download = 'plano-vivo.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  say('Proyecto descargado. Usa Abrir proyecto para continuar después.');
+};
+$('load').onclick = () => $('json').click();
+$('json').onchange = async (e) => {
+  try {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 30 * 1024 * 1024) throw Error();
+    const d = JSON.parse(await file.text());
+    if (
+      d.version !== 1 ||
+      !Array.isArray(d.walls) ||
+      d.walls.length > 2000 ||
+      !(
+        d.width >= 1 &&
+        d.width <= 300 &&
+        d.height >= 2 &&
+        d.height <= 12 &&
+        d.thickness >= 0.05 &&
+        d.thickness <= 1 &&
+        d.ratio > 0.02 &&
+        d.ratio < 50
+      ) ||
+      !/^#[0-9a-f]{6}$/i.test(d.material) ||
+      d.walls.some(
+        (w) =>
+          !['wall', 'door', 'window'].includes(w.type) ||
+          ![w.a?.x, w.a?.y, w.b?.x, w.b?.y].every((n) => Number.isFinite(n) && n >= 0 && n <= 1),
+      )
+    )
+      throw Error();
+    let img = null;
+    if (d.image) {
+      if (!d.image.startsWith('data:image/png;base64,')) throw Error();
+      img = new Image();
+      img.src = d.image;
+      await img.decode();
+    }
+    walls = d.walls;
+    bg = img;
+    ratio = d.ratio;
+    history = [];
+    start = null;
+    ['width', 'height', 'thickness', 'material'].forEach((k) => ($(k).value = d[k]));
+    $('filename').textContent = file.name;
+    resetCam();
+    rebuild();
+    say('Proyecto restaurado.');
+  } catch {
+    say('El archivo no es un proyecto válido de Plano Vivo.');
+  }
+};
+$('demo').onclick = () => {
+  demo();
+  resetCam();
+};
+demo();
+resetCam();

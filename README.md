@@ -75,9 +75,29 @@ Las pruebas verifican áreas y cantidades con aberturas, proyectos antiguos, exp
 
 Los archivos de `fixtures/` son planos sintéticos generados para pruebas, no planos personales.
 
+## Estructura del código
+
+`dist/` es a la vez el código fuente y lo que se publica; no hay paso de compilación.
+
+- `dist/app.mjs`: punto de entrada; conecta los módulos y recupera el último proyecto.
+- `dist/ui/core.mjs`: estado compartido, utilidades del DOM, historial y autoguardado.
+- `dist/ui/plan.mjs`: lienzo 2D, herramientas de dibujo, inspector y calibración de escala.
+- `dist/ui/model.mjs`: recálculo de recintos y cantidades, modelo 3D, restauración y ejemplo.
+- `dist/ui/build.mjs`: importación de imágenes/PDF y reconstrucción (navegador o Python).
+- `dist/ui/files.mjs`: guardar/abrir proyectos, versiones locales y exportaciones.
+- `dist/geometry.mjs`, `dist/detect.mjs`, `dist/viewer.mjs`, `dist/storage.mjs`: geometría, detección, visor Three.js e IndexedDB.
+- `backend/`: motor local FastAPI (`server.py`), análisis OpenCV/PDF (`analyzer.py`, `raster.py`) e IFC (`ifc_export.py`).
+
+El formato se comprueba en cada pull request. Antes de subir cambios:
+
+```bash
+npx prettier@3.9.10 --write "dist/**/*.{mjs,js,css,html}" test.mjs
+python -m pip install ruff==0.17.6 && ruff format backend preview.py
+```
+
 ## Publicación
 
-`.github/workflows/pages.yml` verifica JavaScript y publica `dist/` con GitHub Actions al actualizar `main`. El servidor y sus dependencias no se incluyen en el sitio estático.
+`.github/workflows/pages.yml` comprueba el formato y ejecuta las pruebas de JavaScript y de Python en cada pull request y en `main`; solo publica `dist/` cuando todas pasan y el cambio llega a `main`. El servidor y sus dependencias no se incluyen en el sitio estático.
 
 ## Hoja de ruta pendiente
 
