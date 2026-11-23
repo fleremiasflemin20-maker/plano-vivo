@@ -10,3 +10,6 @@
 *.css text eol=lf
 *.json text eol=lf
 *.toml text eol=lf
+*.mp4 -text
+*.jpg -text
+*.webp -text

@@ -1,0 +1,9 @@
+node_modules/
+package*.json
+audio/
+raw/
+raw.webm
+timeline.json
+*.rgba
+*.size
+*.png

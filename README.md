@@ -2,7 +2,11 @@
 
 Editor de planos 2D con reconstrucción 3D, recorrido y motor Python local.
 
-**Web:** https://fleremiasflemin20-maker.github.io/plano-vivo/
+**Web:** https://plano-vivo.fleremiasflemin.workers.dev (Cloudflare) · copia en https://fleremiasflemin20-maker.github.io/plano-vivo/
+
+**Video de presentación (2 min 45 s):** botón «▶ Ver cómo funciona» en la web, o [`dist/media/plano-vivo-presentacion.mp4`](dist/media/plano-vivo-presentacion.mp4).
+
+**Sugerencias:** botón «Sugerencias» en la web, sin cuenta. Plan de lanzamiento y cómo leerlas: [`docs/lanzamiento.md`](docs/lanzamiento.md).
 
 **Versión original conservada:** https://fleremiasflemin20-maker.github.io/plano-vivo/classic/
 
@@ -107,6 +111,8 @@ Los archivos de `fixtures/` son planos sintéticos generados para pruebas, no pl
 - `dist/ui/model.mjs`: recálculo de recintos y cantidades, modelo 3D, restauración y ejemplo.
 - `dist/ui/build.mjs`: importación de imágenes/PDF y reconstrucción (navegador o Python).
 - `dist/ui/files.mjs`: guardar/abrir proyectos, versiones locales y exportaciones.
+- `dist/ui/feedback.mjs`: formulario de sugerencias y video de presentación.
+- `worker/index.js`: Worker de Cloudflare (sitio y buzón de sugerencias).
 - `dist/recognize/`: reconocimiento de planos (`raster.mjs` operaciones de imagen, `walls.mjs` muros rectos y en diagonal, `openings.mjs` aberturas, `features.mjs` escaleras y terrazas, `objects.mjs` muebles y textos, `scale.mjs` escala, `index.mjs` orquestación).
 - `dist/geometry.mjs`, `dist/detect.mjs`, `dist/viewer.mjs`, `dist/storage.mjs`: geometría, detector de líneas (respaldo), visor Three.js e IndexedDB.
 - `backend/`: motor local FastAPI (`server.py`), análisis OpenCV/PDF (`analyzer.py`, `raster.py`) e IFC (`ifc_export.py`).
@@ -114,13 +120,25 @@ Los archivos de `fixtures/` son planos sintéticos generados para pruebas, no pl
 El formato se comprueba en cada pull request. Antes de subir cambios:
 
 ```bash
-npx prettier@3.9.10 --write "dist/**/*.{mjs,js,css,html}" test.mjs test-recognize.mjs
+npx prettier@3.9.10 --write "dist/**/*.{mjs,js,css,html}" "worker/*.js" test.mjs test-recognize.mjs test-worker.mjs
 python -m pip install ruff==0.17.6 && ruff format backend preview.py
 ```
 
 ## Publicación
 
-`.github/workflows/pages.yml` comprueba el formato y ejecuta las pruebas de JavaScript y de Python en cada pull request y en `main`; solo publica `dist/` cuando todas pasan y el cambio llega a `main`. El servidor y sus dependencias no se incluyen en el sitio estático.
+`.github/workflows/pages.yml` comprueba el formato y ejecuta las pruebas de JavaScript y de Python en cada pull request y en `main`; solo publica `dist/` en GitHub Pages cuando todas pasan y el cambio llega a `main`. El servidor y sus dependencias no se incluyen en el sitio estático.
+
+### Cloudflare
+
+`wrangler.jsonc` publica `dist/` como archivos estáticos de un Worker, más el buzón de sugerencias (`worker/index.js`, `POST /api/sugerencias`), que guarda en la base D1 `plano-vivo-sugerencias` (esquema en `migrations/`) con un límite de cinco envíos por minuto por visitante. No guarda direcciones IP ni usa cookies. Después de fusionar en `main`:
+
+```powershell
+npx wrangler deploy
+```
+
+### Video
+
+`tools/video/` regenera el video de presentación: guion por escenas (`guion.json`), narración con voz sintética, grabación automática de la web con Playwright y montaje con ffmpeg. Instrucciones en `tools/video/montar.py`.
 
 ## Hoja de ruta pendiente
 

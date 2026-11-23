@@ -18,10 +18,10 @@ jobs:
         with:
           node-version: '22'
       - name: Check formatting
-        run: npx --yes prettier@3.9.10 --check "dist/**/*.{mjs,js,css,html}" test.mjs test-recognize.mjs
+        run: npx --yes prettier@3.9.10 --check "dist/**/*.{mjs,js,css,html}" "worker/*.js" test.mjs test-recognize.mjs test-worker.mjs
       - name: Verify JavaScript and geometry
         run: |
-          for f in dist/*.mjs dist/ui/*.mjs dist/recognize/*.mjs; do node --check "$f"; done
+          for f in dist/*.mjs dist/ui/*.mjs dist/recognize/*.mjs worker/*.js; do node --check "$f"; done
           node test.mjs
 
   test-python:
