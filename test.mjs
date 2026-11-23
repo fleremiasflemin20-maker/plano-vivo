@@ -144,6 +144,49 @@ assert.ok(
   'Tile merge closed a doorway',
 );
 console.log('Large sheet:', largeResult.stats);
+
+// Thick strokes: a 600 × 450 pt PDF with 10 pt walls rendered at 4× (40 px strokes,
+// as PDF.js does in the browser) and at 6.8× (68 px, where tiles cut through strokes).
+// Each stroke used to be detected as several parallel and shallow diagonal walls.
+for (const scale of [4, 6.8]) {
+  const w = Math.round(600 * scale),
+    h = Math.round(450 * scale),
+    half = 5 * scale,
+    ink = new Uint8ClampedArray(w * h * 4).fill(255),
+    strokes = [
+      [60, 50, 540, 50],
+      [540, 50, 540, 400],
+      [540, 400, 60, 400],
+      [60, 400, 60, 50],
+      [300, 50, 300, 200],
+      [300, 245, 300, 400],
+    ];
+  for (const [x1, y1, x2, y2] of strokes)
+    for (
+      let y = Math.max(0, Math.floor(Math.min(y1, y2) * scale - half));
+      y < Math.min(h, Math.ceil(Math.max(y1, y2) * scale + half));
+      y++
+    )
+      for (
+        let x = Math.max(0, Math.floor(Math.min(x1, x2) * scale - half));
+        x < Math.min(w, Math.ceil(Math.max(x1, x2) * scale + half));
+        x++
+      ) {
+        const i = (y * w + x) * 4;
+        ink[i] = ink[i + 1] = ink[i + 2] = 0;
+      }
+  const thick = detectLargePlan(ink, w, h, 12);
+  assert.equal(thick.stats.segments, 6, `Thick ${scale}× strokes produced extra walls`);
+  assert.equal(thick.stats.openings, 1, `Thick ${scale}× strokes lost or duplicated the door`);
+  for (const [x1, y1, x2, y2] of strokes) {
+    const mid = { x: (((x1 + x2) / 2) * scale) / w, y: (((y1 + y2) / 2) * scale) / h };
+    assert.ok(
+      thick.walls.some((wall) => wall.type === 'wall' && nearest(mid, wall, w, h).d < 3),
+      `Thick ${scale}× wall not centred on its stroke`,
+    );
+  }
+  console.log(`Thick strokes ${scale}×:`, thick.stats);
+}
 const crcTable = Array.from({ length: 256 }, (_, i) => {
   let c = i;
   for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
