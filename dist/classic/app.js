@@ -631,13 +631,11 @@ $('detect').onclick = () => {
       }
     }
   }
-  const detected = candidates
-    .slice(0, 350)
-    .map((s) => ({
-      a: { x: (s.v ? s.a : s.start) / W, y: (s.v ? s.start : s.a) / H },
-      b: { x: (s.v ? s.a : s.end) / W, y: (s.v ? s.end : s.a) / H },
-      type: 'wall',
-    }));
+  const detected = candidates.slice(0, 350).map((s) => ({
+    a: { x: (s.v ? s.a : s.start) / W, y: (s.v ? s.start : s.a) / H },
+    b: { x: (s.v ? s.a : s.end) / W, y: (s.v ? s.end : s.a) / H },
+    type: 'wall',
+  }));
   if (!detected.length) {
     say('No se encontraron líneas claras. Usa Pared para trazarlas manualmente.');
     return;
