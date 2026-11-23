@@ -182,18 +182,19 @@ function drawWall(w) {
   ctx.moveTo(a.x, a.y);
   ctx.lineTo(b.x, b.y);
   ctx.stroke();
-  if (w.type === 'door' && l > 2) {
-    // Door leaf and swing arc.
+  if (w.type === 'door' && l > 2 && !w.passage) {
+    // Door leaf and swing arc, hinged at `a`; swing -1 opens to the other side.
     ctx.lineWidth = 1;
-    const angle = Math.atan2(dy, dx);
+    const angle = Math.atan2(dy, dx),
+      side = w.swing === -1 ? -1 : 1;
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
-    ctx.arc(a.x, a.y, l, angle, angle - Math.PI / 2, true);
+    ctx.arc(a.x, a.y, l, angle, angle - (side * Math.PI) / 2, side === 1);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
-    ctx.lineTo(a.x + Math.sin(angle) * l, a.y - Math.cos(angle) * l);
+    ctx.lineTo(a.x + side * Math.sin(angle) * l, a.y - side * Math.cos(angle) * l);
     ctx.stroke();
   }
   if (w.type === 'window' && l > 2) {
@@ -218,6 +219,66 @@ function drawWall(w) {
       ctx.stroke();
     }
   }
+}
+
+/** Stairs (treads + climbing arrow) and terraces (hatched decking). */
+function drawFeature(f) {
+  const a = screen({ x: f.x, y: f.y }),
+    b = screen({ x: f.x + f.w, y: f.y + f.h }),
+    w = b.x - a.x,
+    h = b.y - a.y;
+  ctx.save();
+  ctx.lineWidth = 1;
+  if (f.type === 'terrace') {
+    ctx.fillStyle = '#f3ead6';
+    ctx.fillRect(a.x, a.y, w, h);
+    ctx.beginPath();
+    ctx.rect(a.x, a.y, w, h);
+    ctx.clip();
+    ctx.strokeStyle = '#d4bf94';
+    ctx.beginPath();
+    for (let k = -h; k < w; k += 9) {
+      ctx.moveTo(a.x + k, a.y + h);
+      ctx.lineTo(a.x + k + h, a.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle = '#b39a6a';
+    ctx.strokeRect(a.x, a.y, w, h);
+    return;
+  }
+  ctx.fillStyle = '#eeeaf5';
+  ctx.fillRect(a.x, a.y, w, h);
+  ctx.strokeStyle = '#7b6aa8';
+  ctx.strokeRect(a.x, a.y, w, h);
+  ctx.beginPath();
+  for (let i = 1; i < f.steps; i++) {
+    const t = i / f.steps;
+    if (f.axis === 'y') {
+      ctx.moveTo(a.x, a.y + h * t);
+      ctx.lineTo(b.x, a.y + h * t);
+    } else {
+      ctx.moveTo(a.x + w * t, a.y);
+      ctx.lineTo(a.x + w * t, b.y);
+    }
+  }
+  ctx.stroke();
+  // Climbing direction, from the first tread to the last.
+  const [sx, sy, ex, ey] =
+    f.axis === 'y'
+      ? [a.x + w / 2, a.y + h * 0.92, a.x + w / 2, a.y + h * 0.08]
+      : [a.x + w * 0.08, a.y + h / 2, a.x + w * 0.92, a.y + h / 2];
+  const ang = Math.atan2(ey - sy, ex - sx),
+    head = Math.min(8, Math.hypot(ex - sx, ey - sy) / 4);
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(ex, ey);
+  ctx.lineTo(ex - head * Math.cos(ang - 0.5), ey - head * Math.sin(ang - 0.5));
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - head * Math.cos(ang + 0.5), ey - head * Math.sin(ang + 0.5));
+  ctx.stroke();
+  ctx.restore();
 }
 
 /** Preview of the element being drawn, plus the live measurement badge. */
@@ -289,6 +350,7 @@ export function draw() {
           run.h * fit.h + 0.3,
         );
   }
+  for (const f of state.features) drawFeature(f);
   for (const w of state.walls) drawWall(w);
   if ($('showRooms').checked)
     state.rooms.forEach((room, i) => {
@@ -428,10 +490,20 @@ function startSelect(e, raw) {
 
 function erase(raw) {
   const w = hit(raw);
-  if (!w) return;
+  if (w) {
+    checkpoint();
+    state.walls = state.walls.filter((s) => s !== w);
+    state.selected = null;
+    rebuild();
+    return;
+  }
+  // No wall under the pointer: remove the stair or terrace there, if any.
+  const f = state.features.find(
+    (f) => raw.x >= f.x && raw.x <= f.x + f.w && raw.y >= f.y && raw.y <= f.y + f.h,
+  );
+  if (!f) return;
   checkpoint();
-  state.walls = state.walls.filter((s) => s !== w);
-  state.selected = null;
+  state.features = state.features.filter((s) => s !== f);
   rebuild();
 }
 
@@ -667,6 +739,7 @@ $('scaleDialog').addEventListener('close', () => {
       $('width').value = (W() * factor).toFixed(4);
       $('depth').value = (D() * factor).toFixed(4);
       $('scaleHint').textContent = 'Escala calibrada con una distancia conocida.';
+      state.scaleAssumed = false;
       rebuild();
       viewer.reset();
       say('Escala calibrada.');

@@ -145,11 +145,38 @@ export function validateProject(d) {
     ])
       if (w[k] != null && (!Number.isFinite(w[k]) || w[k] < min || w[k] > max))
         throw Error('Propiedad no válida');
+    if (w.swing != null && w.swing !== 1 && w.swing !== -1) throw Error('Propiedad no válida');
+    if (w.passage != null && typeof w.passage !== 'boolean') throw Error('Propiedad no válida');
   }
+  validateFeatures(d.features);
   if (d.image && !/^data:image\/png;base64,/.test(d.image)) throw Error('Imagen no válida');
   return d;
 }
-export function toDXF(walls, W, D) {
+export const FEATURE_TYPES = ['stair', 'terrace'];
+
+/** Plan features (stairs, terraces): normalised rectangles on the sheet. */
+export function validateFeatures(features) {
+  if (features == null) return;
+  if (!Array.isArray(features) || features.length > 200) throw Error('Elementos no válidos');
+  for (const f of features) {
+    const inSheet = [f?.x, f?.y, f?.w, f?.h].every((n) => Number.isFinite(n) && n >= 0 && n <= 1);
+    if (
+      !FEATURE_TYPES.includes(f?.type) ||
+      !inSheet ||
+      f.w <= 0 ||
+      f.h <= 0 ||
+      f.x + f.w > 1.0001 ||
+      f.y + f.h > 1.0001
+    )
+      throw Error('Elementos no válidos');
+    if (f.type === 'stair') {
+      if (!Number.isInteger(f.steps) || f.steps < 2 || f.steps > 60 || !['x', 'y'].includes(f.axis))
+        throw Error('Escalera no válida');
+    }
+  }
+}
+
+export function toDXF(walls, W, D, features = []) {
   let lines = [
     '0',
     'SECTION',
@@ -185,6 +212,39 @@ export function toDXF(walls, W, D) {
       '31',
       '0',
     );
+  }
+  const line = (layer, x1, y1, x2, y2) =>
+    lines.push(
+      '0',
+      'LINE',
+      '8',
+      layer,
+      '10',
+      String(x1 * W),
+      '20',
+      String((1 - y1) * D),
+      '30',
+      '0',
+      '11',
+      String(x2 * W),
+      '21',
+      String((1 - y2) * D),
+      '31',
+      '0',
+    );
+  for (const f of features) {
+    const layer = f.type === 'stair' ? 'ESCALERAS' : 'TERRAZAS',
+      [x0, y0, x1, y1] = [f.x, f.y, f.x + f.w, f.y + f.h];
+    line(layer, x0, y0, x1, y0);
+    line(layer, x1, y0, x1, y1);
+    line(layer, x1, y1, x0, y1);
+    line(layer, x0, y1, x0, y0);
+    if (f.type === 'stair')
+      for (let i = 1; i < f.steps; i++) {
+        const t = i / f.steps;
+        if (f.axis === 'y') line(layer, x0, y0 + f.h * t, x1, y0 + f.h * t);
+        else line(layer, x0 + f.w * t, y0, x0 + f.w * t, y1);
+      }
   }
   lines.push('0', 'ENDSEC', '0', 'EOF');
   return lines.join('\n');

@@ -38,6 +38,7 @@ export function renderModel() {
     H: H(),
     T: T(),
     rooms: state.rooms,
+    features: state.features,
     image: state.bg,
     material: $('material').value,
     floorColor: $('floorMaterial').value,
@@ -101,6 +102,8 @@ export async function restore(data, save = true) {
   }
   state.bg = img;
   state.walls = data.walls.map((w) => ({ ...w, id: w.id || uid() }));
+  state.features = (data.features || []).map((f) => ({ ...f, id: f.id || uid() }));
+  state.scaleAssumed = false;
   $('width').value = data.width;
   $('depth').value = (data.width * data.ratio).toFixed(5);
   $('height').value = data.height;
@@ -123,6 +126,7 @@ export async function restore(data, save = true) {
 /** Clear the sheet; used by "Nuevo plano", the demo and image imports. */
 export function clearProject() {
   state.walls = [];
+  state.features = [];
   state.bg = null;
   state.sourceFile = null;
   state.analysis = null;

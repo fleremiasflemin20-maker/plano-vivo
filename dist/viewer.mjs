@@ -54,7 +54,8 @@ export function createViewer(container, onStatus) {
     }
     floorTexture?.dispose();
     floorTexture = null;
-    const { walls, W, D, H, T, rooms, image, material, floorColor, imageFloor, selected } = data;
+    const { walls, W, D, H, T, rooms, image, material, floorColor, imageFloor, selected } = data,
+      features = data.features || [];
     const base = box(W, 0.13, D, 0, -0.09, 0, mat('#d9dfd7'), 0, 'Base');
     base.castShadow = false;
     if (rooms.length) {
@@ -112,6 +113,7 @@ export function createViewer(container, onStatus) {
       floor.name = 'Referencia del plano';
       group.add(floor);
     }
+    for (const f of features) buildFeature(f, W, D, H);
     for (const s of walls) {
       const dx = (s.b.x - s.a.x) * W,
         dz = (s.b.y - s.a.y) * D,
@@ -123,8 +125,15 @@ export function createViewer(container, onStatus) {
         h = s.height || H,
         t = s.thickness || T,
         m = mat(s.id === selected ? '#8bbda1' : material);
-      if (s.type === 'wall') box(L, h, t, x, h / 2, z, m, rot, 'Pared ' + s.id);
-      else {
+      if (s.type === 'wall') {
+        // Extend joined ends by half the thickness so corners close without a notch.
+        const ext = jointExtension(s, walls, W, D, T),
+          ux = dx / L,
+          uz = dz / L,
+          cx = x + ((ext.b - ext.a) / 2) * ux,
+          cz = z + ((ext.b - ext.a) / 2) * uz;
+        box(L + ext.a + ext.b, h, t, cx, h / 2, cz, m, rot, 'Pared ' + s.id);
+      } else {
         const sill = s.type === 'window' ? Math.min(s.sill ?? 0.9, h) : 0,
           opening = Math.min(s.openHeight || (s.type === 'window' ? 1.2 : 2.1), h - sill);
         if (sill > 0) box(L, sill, t, x, sill / 2, z, m, rot, 'Antepecho');
@@ -187,6 +196,46 @@ export function createViewer(container, onStatus) {
     sun.shadow.camera.updateProjectionMatrix();
     resize();
   }
+  /** Extra length at each end of a wall that meets another wall there. */
+  function jointExtension(s, walls, W, D, T) {
+    const t = s.thickness || T,
+      out = { a: 0, b: 0 };
+    for (const key of ['a', 'b'])
+      for (const q of walls) {
+        if (q === s || q.type !== 'wall') continue;
+        if (nearest(s[key], q, W, D).d <= (q.thickness || T) / 2 + 0.02) {
+          out[key] = t / 2;
+          break;
+        }
+      }
+    return out;
+  }
+
+  function buildFeature(f, W, D, H) {
+    const x0 = f.x * W - W / 2,
+      z0 = f.y * D - D / 2,
+      w = f.w * W,
+      d = f.h * D;
+    if (f.type === 'terrace') {
+      box(w, 0.05, d, x0 + w / 2, 0.025, z0 + d / 2, mat('#b89f78'), 0, 'Terraza');
+      return;
+    }
+    // Stair climbing from the start of its axis to a full storey height.
+    const n = f.steps,
+      rise = H / n,
+      along = f.axis === 'y' ? d : w,
+      run = along / n,
+      stepMat = mat('#d8d2c4');
+    for (let i = 0; i < n; i++) {
+      const top = rise * (i + 1),
+        // Treads go from the far end (bottom) towards the near end (top), matching the
+        // arrow drawn in plan.
+        pos = along - run * (i + 0.5);
+      if (f.axis === 'y') box(w, top, run, x0 + w / 2, top / 2, z0 + pos, stepMat, 0, 'Peldaño');
+      else box(run, top, d, x0 + along - pos, top / 2, z0 + d / 2, stepMat, 0, 'Peldaño');
+    }
+  }
+
   function resize() {
     const r = container.getBoundingClientRect();
     if (r.width && r.height) {
