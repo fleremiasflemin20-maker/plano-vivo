@@ -1,5 +1,52 @@
 import { clamp, nearest } from './geometry.mjs';
 const median = (a) => a.sort((x, y) => x - y)[Math.floor(a.length / 2)] || 0;
+// Half-width, in pixels, up to which a stroke is measured across. Filled walls and
+// thick PDF strokes rendered at 4× easily exceed 30 px, so this must be generous.
+const MAX_HALF_STROKE = 128;
+// Pixel distance at which a parallel line counts as the same stroke. Thick strokes
+// produce edges and shallow diagonals across their band, so the band's half-width
+// is added once the stroke is thicker than the base tolerance.
+const strokeBand = (stroke, tolerance) => (stroke > tolerance ? stroke / 2 + tolerance : tolerance);
+/**
+ * Measure the ink stroke across segment a–b (pixel coordinates) at several points.
+ * Returns the median offset of the stroke's centre along the normal (nx, ny), the
+ * median width, and how many points could be measured. Mirrors the measurement
+ * done per tile in detectPlan, but on the full sheet.
+ */
+function measureStroke(a, b, inkAt) {
+  const length = Math.hypot(b.x - a.x, b.y - a.y);
+  if (!length) return { offset: 0, width: 0, nx: 0, ny: 0, samples: 0 };
+  const tx = (b.x - a.x) / length,
+    ty = (b.y - a.y) / length,
+    nx = -ty,
+    ny = tx,
+    widths = [],
+    offsets = [];
+  for (let u = 5; u < length - 4; u += Math.max(4, length / 12)) {
+    const x = a.x + tx * u,
+      y = a.y + ty * u;
+    let center = null;
+    for (let o = -3; o <= 3; o++)
+      if (inkAt(x + nx * o, y + ny * o)) {
+        center = o;
+        break;
+      }
+    if (center === null) continue;
+    let lo = center,
+      hi = center;
+    while (lo > -MAX_HALF_STROKE && inkAt(x + nx * (lo - 1), y + ny * (lo - 1))) lo--;
+    while (hi < MAX_HALF_STROKE && inkAt(x + nx * (hi + 1), y + ny * (hi + 1))) hi++;
+    widths.push(hi - lo + 1);
+    offsets.push((hi + lo) / 2);
+  }
+  return { offset: median(offsets), width: median(widths), nx, ny, samples: offsets.length };
+}
+function recenter(line, inkAt) {
+  const { offset, nx, ny, samples } = measureStroke(line.a, line.b, inkAt);
+  if (samples < 3 || !offset) return;
+  line.a = { x: line.a.x + nx * offset, y: line.a.y + ny * offset };
+  line.b = { x: line.b.x + nx * offset, y: line.b.y + ny * offset };
+}
 // Analyze large sheets locally, then stitch overlapping observations in sheet
 // coordinates. The original world scale applies to every tile.
 export function detectLargePlan(image, W, H, worldWidth, progress = () => {}) {
@@ -15,7 +62,8 @@ export function detectLargePlan(image, W, H, worldWidth, progress = () => {}) {
     for (const x of origins(W))
       tiles.push({ x, y, w: Math.min(800, W - x), h: Math.min(800, H - y) });
   const candidates = [],
-    openings = [];
+    openings = [],
+    thresholds = [];
   for (let index = 0; index < tiles.length; index++) {
     const t = tiles[index],
       pixels = new Uint8ClampedArray(t.w * t.h * 4);
@@ -29,11 +77,12 @@ export function detectLargePlan(image, W, H, worldWidth, progress = () => {}) {
       `Analizando zona ${index + 1} de ${tiles.length}…`,
     );
     const result = detectPlan(pixels, t.w, t.h, (worldWidth * t.w) / W);
-    for (const wall of result.walls) {
+    if (result.stats) thresholds.push(result.stats.threshold);
+    result.walls.forEach((wall, i) => {
       const map = (p) => ({ x: p.x * t.w + t.x, y: p.y * t.h + t.y }),
-        item = { ...wall, a: map(wall.a), b: map(wall.b) };
+        item = { ...wall, a: map(wall.a), b: map(wall.b), stroke: result.strokes?.[i] || 0 };
       (wall.type === 'wall' ? candidates : openings).push(item);
-    }
+    });
   }
   progress(85, 'Uniendo las zonas del plano…');
   candidates.sort(
@@ -42,34 +91,60 @@ export function detectLargePlan(image, W, H, worldWidth, progress = () => {}) {
   const merged = [];
   for (const line of candidates) {
     let a = { ...line.a },
-      b = { ...line.b };
-    const length = Math.hypot(b.x - a.x, b.y - a.y),
-      ux = (b.x - a.x) / length,
-      uy = (b.y - a.y) / length;
-    if (!length) continue;
+      b = { ...line.b },
+      stroke = line.stroke;
+    if (!Math.hypot(b.x - a.x, b.y - a.y)) continue;
     for (let i = merged.length - 1; i >= 0; i--) {
       const q = merged[i],
+        length = Math.hypot(b.x - a.x, b.y - a.y),
+        ux = (b.x - a.x) / length,
+        uy = (b.y - a.y) / length,
         qx = q.b.x - q.a.x,
         qy = q.b.y - q.a.y,
         ql = Math.hypot(qx, qy);
       if (Math.abs((qx * ux + qy * uy) / ql) < 0.995) continue;
+      // A tile that cuts through a thick stroke sees only part of it, so its centre
+      // line can be offset by up to half the stroke width.
       const cross = (p) => Math.abs((p.x - a.x) * uy - (p.y - a.y) * ux);
-      if (Math.max(cross(q.a), cross(q.b)) > 10) continue;
+      if (Math.max(cross(q.a), cross(q.b)) > strokeBand(Math.max(q.stroke, stroke), 10)) continue;
       const dot = (p) => (p.x - a.x) * ux + (p.y - a.y) * uy,
         p = dot(q.a),
         r = dot(q.b),
         end = dot(b);
       if (Math.min(p, r) > end + 2 || Math.max(p, r) < -2) continue;
-      const low = Math.min(0, p, r),
-        high = Math.max(end, p, r),
-        origin = { ...a };
-      a = { x: origin.x + low * ux, y: origin.y + low * uy };
-      b = { x: origin.x + high * ux, y: origin.y + high * uy };
+      // Extend along the longer piece's axis; centring is corrected afterwards on the
+      // full image, since a tile that clipped the stroke reports an offset centre.
+      const qLonger = ql >= length,
+        [axis, other] = qLonger ? [q, { a, b }] : [{ a, b }, q],
+        axisLength = qLonger ? ql : length,
+        vx = (axis.b.x - axis.a.x) / axisLength,
+        vy = (axis.b.y - axis.a.y) / axisLength,
+        along = (pt) => (pt.x - axis.a.x) * vx + (pt.y - axis.a.y) * vy,
+        ends = [0, along(axis.b), along(other.a), along(other.b)],
+        low = Math.min(...ends),
+        high = Math.max(...ends);
+      a = { x: axis.a.x + low * vx, y: axis.a.y + low * vy };
+      b = { x: axis.a.x + high * vx, y: axis.a.y + high * vy };
+      stroke = Math.max(stroke, q.stroke);
       merged.splice(i, 1);
     }
-    merged.push({ ...line, a, b });
+    merged.push({ ...line, a, b, stroke });
   }
-  const normalized = (line) => ({
+  const threshold = thresholds.length ? median(thresholds) : 120,
+    inkAt = (x, y) => {
+      x = Math.round(x);
+      y = Math.round(y);
+      if (x < 0 || y < 0 || x >= W || y >= H) return false;
+      const k = (y * W + x) * 4,
+        alpha = image[k + 3] / 255;
+      return (
+        (image[k] * 0.299 + image[k + 1] * 0.587 + image[k + 2] * 0.114) * alpha +
+          255 * (1 - alpha) <
+        threshold
+      );
+    };
+  for (const line of merged) recenter(line, inkAt);
+  const normalized = ({ stroke, ...line }) => ({
       ...line,
       a: { x: line.a.x / W, y: line.a.y / H },
       b: { x: line.b.x / W, y: line.b.y / H },
@@ -205,8 +280,8 @@ export function detectPlan(image, W, H, worldWidth, progress = () => {}) {
         if (center === null) continue;
         let lo = center,
           hi = center;
-        while (lo > -32 && at(x + nx * (lo - 1), y + ny * (lo - 1))) lo--;
-        while (hi < 32 && at(x + nx * (hi + 1), y + ny * (hi + 1))) hi++;
+        while (lo > -MAX_HALF_STROKE && at(x + nx * (lo - 1), y + ny * (lo - 1))) lo--;
+        while (hi < MAX_HALF_STROKE && at(x + nx * (hi + 1), y + ny * (hi + 1))) hi++;
         widths.push(hi - lo + 1);
         offsets.push((hi + lo) / 2);
       }
@@ -257,10 +332,23 @@ export function detectPlan(image, W, H, worldWidth, progress = () => {}) {
         (Math.hypot(q.b.x - q.a.x, (q.b.y - q.a.y) * ratio) *
           Math.hypot(l.b.x - l.a.x, (l.b.y - l.a.y) * ratio));
       if (Math.abs(dot) < 0.94) return false;
-      return nearest(l.a, q, W, H).d < tolerance && nearest(l.b, q, W, H).d < tolerance;
+      const band = strokeBand(Math.max(q.pixels, l.pixels), tolerance);
+      return nearest(l.a, q, W, H).d < band && nearest(l.b, q, W, H).d < band;
     });
     if (!same) merged.push(l);
     else same.pixels = Math.max(same.pixels, l.pixels);
+  }
+  // Drop short segments lying inside a thicker stroke's band, e.g. the edge of a
+  // thick stroke's end cap, detected as a short perpendicular line.
+  const segmentLength = (l) => Math.hypot((l.b.x - l.a.x) * W, (l.b.y - l.a.y) * H);
+  for (let i = merged.length - 1; i >= 0; i--) {
+    const l = merged[i];
+    const inside = merged.some((q) => {
+      if (q === l || q.pixels <= tolerance || segmentLength(l) > q.pixels * 1.5) return false;
+      const band = strokeBand(q.pixels, tolerance);
+      return nearest(l.a, q, W, H).d < band && nearest(l.b, q, W, H).d < band;
+    });
+    if (inside) merged.splice(i, 1);
   }
   // Remove isolated thin lines (dimension strings, text and furniture strokes).
   lines = merged.filter((l) => {
@@ -342,6 +430,9 @@ export function detectPlan(image, W, H, worldWidth, progress = () => {}) {
     .concat(openings);
   return {
     walls: result,
+    // Measured stroke width in pixels for each entry of `walls` (0 for openings);
+    // used when stitching tiles. Kept out of the wall objects so it is not saved.
+    strokes: lines.map((l) => l.pixels).concat(openings.map(() => 0)),
     notes: [
       'Construcción geométrica aproximada: revisa paredes y aberturas resaltadas.',
       'La escala y la altura usan tus ajustes; no se deducen de la foto.',
