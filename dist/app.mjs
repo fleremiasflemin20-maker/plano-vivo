@@ -106,6 +106,7 @@ for (const id of ['width', 'depth', 'height', 'thickness']) {
       if (previous) restore(previous);
       return;
     }
+    if (id === 'width' || id === 'depth') state.scaleAssumed = false;
     if (previous) {
       checkpoint(previous);
       // With a background image, keep its aspect ratio when the width changes.

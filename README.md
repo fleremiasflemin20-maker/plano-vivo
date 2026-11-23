@@ -43,7 +43,8 @@ python -m backend.server
 - Longitudes, áreas netas de muros y volúmenes geométricos preliminares.
 - Deshacer/rehacer, autoguardado IndexedDB y cinco versiones locales recuperables.
 - Importación de los proyectos JSON de la primera versión.
-- Detección de líneas y propuestas de aberturas desde imágenes, en un trabajador separado.
+- Reconocimiento de planos arquitectónicos desde imágenes, en un trabajador separado: muros y tabiques con su grosor real, puertas con su lado de giro, ventanas y ventanales, pasos, escaleras y terrazas, escala leída de la barra gráfica (o estimada por el ancho de las puertas) y recintos cerrados.
+- Escaleras y terrazas como elementos de planta: se dibujan en 2D, se construyen en 3D (peldaños hasta la altura de planta, tarima) y se exportan en DXF.
 - Vista dual, materiales básicos, iluminación y recorrido con colisiones.
 - Exportación DXF, SVG, GLB, CSV y PNG.
 - Motor local FastAPI/OpenCV: lectura de vectores PDF, selección de página, limpieza de imagen, corrección de inclinación y OCR con RapidOCR.
@@ -51,6 +52,21 @@ python -m backend.server
 - Exportación IFC4 local con muros, aberturas, puertas, ventanas y relaciones de huecos/rellenos.
 
 ## Precisión y alcance
+
+### Cómo se reconoce un plano
+
+`dist/recognize/` analiza la imagen sin servicios externos:
+
+1. **Preparación.** Las imágenes pequeñas se amplían (las de internet suelen medir menos de 500 px) y las grandes se reducen conservando el píxel más oscuro. Se separa la tinta del papel y de los rellenos de piso.
+2. **Grosores de trazo.** La transformada de distancia mide el grosor de cada trazo. Los muros son el grosor que concentra más tinta; muebles, textos, rayados y vidrios son el trazo fino.
+3. **Muros.** Una apertura morfológica conserva los trazos gruesos; las bandas horizontales y verticales resultantes dan cada muro con su grosor. Los planos de líneas usan las líneas dobles.
+4. **Líneas finas.** El *black-hat* (contraste local) detecta líneas tenues aunque estén sobre un piso gris.
+5. **Aberturas.** Cada hueco entre muros alineados, o entre el extremo de un muro y otro muro, se clasifica: líneas dentro = ventana; arco u hoja = puerta, con su bisagra y lado de giro; vacío = paso, o ventanal si es ancho.
+6. **Uniones.** Los extremos se ajustan a los muros perpendiculares para cerrar esquinas y recintos.
+7. **Escaleras y terrazas.** Series regulares de líneas paralelas: peldaños si el paso es de alrededor de un grosor de muro (≈ 0,28 m), pavimento si es mayor o forma una rejilla.
+8. **Escala.** La barra gráfica se reconoce por la proporción entre sus divisiones (por ejemplo 0 – 1 – 2,5 – 5 m) sin leer los números; si no hay barra, se usa el ancho de al menos dos puertas. En ambos casos el grosor de muro resultante debe ser físicamente razonable.
+
+Si la imagen no parece un plano arquitectónico (un croquis a mano, por ejemplo), se usa el detector de líneas anterior. Con el motor Python, los PDF siguen usando la lectura de vectores; las imágenes usan este reconocimiento.
 
 El análisis de imágenes conserva hasta 4096 píxeles en el lado mayor. Los planos grandes se procesan por zonas solapadas y los segmentos se unen en las coordenadas de la lámina, manteniendo los huecos entre muros. Esto se aplica tanto al navegador como al motor local. Python centra los trazos de muros rellenos y filtra trazos finos cuando existe suficiente geometría gruesa; este filtro es heurístico y puede omitir elementos finos en dibujos de estilos mezclados. No equivale a reconocer semánticamente cada símbolo.
 
@@ -85,13 +101,14 @@ Los archivos de `fixtures/` son planos sintéticos generados para pruebas, no pl
 - `dist/ui/model.mjs`: recálculo de recintos y cantidades, modelo 3D, restauración y ejemplo.
 - `dist/ui/build.mjs`: importación de imágenes/PDF y reconstrucción (navegador o Python).
 - `dist/ui/files.mjs`: guardar/abrir proyectos, versiones locales y exportaciones.
-- `dist/geometry.mjs`, `dist/detect.mjs`, `dist/viewer.mjs`, `dist/storage.mjs`: geometría, detección, visor Three.js e IndexedDB.
+- `dist/recognize/`: reconocimiento de planos (`raster.mjs` operaciones de imagen, `walls.mjs` muros, `openings.mjs` aberturas, `features.mjs` escaleras y terrazas, `scale.mjs` escala, `index.mjs` orquestación).
+- `dist/geometry.mjs`, `dist/detect.mjs`, `dist/viewer.mjs`, `dist/storage.mjs`: geometría, detector de líneas (respaldo), visor Three.js e IndexedDB.
 - `backend/`: motor local FastAPI (`server.py`), análisis OpenCV/PDF (`analyzer.py`, `raster.py`) e IFC (`ifc_export.py`).
 
 El formato se comprueba en cada pull request. Antes de subir cambios:
 
 ```bash
-npx prettier@3.9.10 --write "dist/**/*.{mjs,js,css,html}" test.mjs
+npx prettier@3.9.10 --write "dist/**/*.{mjs,js,css,html}" test.mjs test-recognize.mjs
 python -m pip install ruff==0.17.6 && ruff format backend preview.py
 ```
 

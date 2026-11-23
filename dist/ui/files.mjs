@@ -169,8 +169,11 @@ function quantitiesCSV() {
 }
 
 $('exportDXF').onclick = () => {
-  download(new Blob([toDXF(state.walls, W(), D())], { type: 'application/dxf' }), 'plano-vivo.dxf');
-  say('DXF exportado en metros, con ejes separados en capas MUROS, PUERTAS y VENTANAS.');
+  download(
+    new Blob([toDXF(state.walls, W(), D(), state.features)], { type: 'application/dxf' }),
+    'plano-vivo.dxf',
+  );
+  say('DXF exportado en metros: capas MUROS, PUERTAS, VENTANAS, ESCALERAS y TERRAZAS.');
 };
 
 $('exportSVG').onclick = () => {

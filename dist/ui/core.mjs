@@ -26,6 +26,7 @@ export const localEngine = !!document.querySelector('meta[name=python-engine]');
  */
 export const state = {
   walls: [],
+  features: [], // stairs and terraces: { type, x, y, w, h, steps?, axis? }, normalised
   rooms: [],
   bg: null, // HTMLImageElement of the imported plan, if any
   tool: 'wall',
@@ -39,6 +40,7 @@ export const state = {
   busy: false,
   report: null,
   sourceFile: null, // original uploaded File, sent to the Python engine
+  scaleAssumed: false, // true until the user sets the scale; recognition may then set it
   analysis: null,
   worker: null,
   pythonJob: null,
@@ -82,6 +84,7 @@ export function project() {
     material: $('material').value,
     floorColor: $('floorMaterial').value,
     walls: structuredClone(state.walls),
+    features: structuredClone(state.features),
     image: state.bg?.src || null,
     filename: $('filename').textContent,
     report: state.report,

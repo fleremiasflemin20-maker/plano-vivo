@@ -155,6 +155,7 @@ async function importFile(file) {
     clearProject();
     state.bg = image;
     state.sourceFile = file;
+    state.scaleAssumed = true;
     $('width').value = 12;
     $('depth').value = ((12 * image.height) / image.width).toFixed(4);
     $('filename').textContent = file.name + (file.type === 'application/pdf' ? ' · página 1' : '');
@@ -176,7 +177,60 @@ async function importFile(file) {
   }
 }
 
-/** Browser reconstruction: run detect.mjs in a worker on the background image. */
+/** Use a recognised scale unless the user already set one (typed width or calibration). */
+function applyScale(scale) {
+  if (!scale || !state.scaleAssumed) return false;
+  const width = Math.round(scale.sheetWidth * 100) / 100;
+  if (!(width >= 1 && width <= 300)) return false;
+  const depth = (width * state.bg.height) / state.bg.width;
+  if (!(depth >= 1 && depth <= 300)) return false;
+  $('width').value = width;
+  $('depth').value = depth.toFixed(4);
+  $('scaleHint').textContent =
+    scale.source === 'bar'
+      ? 'Escala leída de la barra gráfica del plano. Compruébala con una medida conocida.'
+      : 'Escala estimada por el ancho de las puertas. Compruébala con una medida conocida.';
+  state.scaleAssumed = false;
+  return true;
+}
+
+/** Replace the model with a recognition result (walls, openings, stairs, terraces). */
+function applyRecognition(result) {
+  applyScale(result.scale);
+  const clampT = (t) => Math.min(1, Math.max(0.05, Math.round(t * 1000) / 1000));
+  state.walls = result.walls.map(({ thicknessRatio, ...w }) => ({
+    ...w,
+    id: uid(),
+    ...(thicknessRatio ? { thickness: clampT(thicknessRatio * W()) } : {}),
+  }));
+  state.features = (result.features || []).map((f) => ({ ...f, id: uid() }));
+  state.selected = null;
+  state.report = result.notes.join(' ');
+}
+
+function summary(result) {
+  const s = result.stats;
+  if (result.engine !== 'plan')
+    return (
+      'Modelo 3D generado: ' +
+      s.segments +
+      ' segmentos y ' +
+      s.openings +
+      ' aberturas propuestas. Revisa la correspondencia con la imagen en Vista dual.'
+    );
+  const n = (count, one, many) => (count ? `${count} ${count === 1 ? one : many}` : ''),
+    parts = [
+      n(s.walls, 'muro', 'muros'),
+      n(s.doors, 'puerta', 'puertas'),
+      n(s.passages, 'paso', 'pasos'),
+      n(s.windows, 'ventana', 'ventanas'),
+      n(s.stairs, 'escalera', 'escaleras'),
+      n(s.terraces, 'terraza', 'terrazas'),
+    ].filter(Boolean);
+  return `Plano reconocido: ${parts.join(', ')}. Revisa los elementos resaltados en Vista dual.`;
+}
+
+/** Browser reconstruction: run the recogniser in a worker on the background image. */
 function constructInBrowser() {
   setBusy(true);
   progress(5, 'Preparando la imagen…');
@@ -208,20 +262,12 @@ function constructInBrowser() {
         return;
       }
       checkpoint();
-      state.walls = result.walls.map((w) => ({ ...w, id: uid() }));
-      state.selected = null;
-      state.report = result.notes.join(' ');
+      applyRecognition(result);
       rebuild();
       setBusy(false);
       viewer.reset();
       setView('model');
-      say(
-        'Modelo 3D generado: ' +
-          result.stats.segments +
-          ' segmentos y ' +
-          result.stats.openings +
-          ' aberturas propuestas. Revisa la correspondencia con la imagen en Vista dual.',
-      );
+      say(summary(result));
     };
     state.worker.onerror = () => {
       stop();
@@ -335,7 +381,9 @@ $('build').onclick = async () => {
   )
     return;
   await snapshot();
-  if (localEngine) await constructPython();
+  // The Python engine reads PDF vectors and text directly; raster images use the
+  // plan recogniser, which runs in the browser in both modes.
+  if (localEngine && state.sourceFile && isPdf(state.sourceFile)) await constructPython();
   else constructInBrowser();
 };
 

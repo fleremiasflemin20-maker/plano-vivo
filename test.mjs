@@ -3,6 +3,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 import { findRooms, quantities, validateProject, nearest, toDXF } from './dist/geometry.mjs';
 import { detectPlan, detectLargePlan } from './dist/detect.mjs';
+import { runRecognitionTests } from './test-recognize.mjs';
 const wall = (x1, y1, x2, y2, type = 'wall') => ({
   a: { x: x1, y: y1 },
   b: { x: x2, y: y2 },
@@ -224,6 +225,7 @@ writeFileSync(
     chunk('IEND', Buffer.alloc(0)),
   ]),
 );
+runRecognitionTests();
 console.log(
-  'Geometry, quantities, legacy import, DXF, blank image and reconstruction checks passed.',
+  'Geometry, quantities, legacy import, DXF, blank image, reconstruction and plan recognition checks passed.',
 );
