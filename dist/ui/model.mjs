@@ -64,10 +64,14 @@ function renderSummary(q) {
     ' ventanas';
   $('dimensions').textContent = fmt(W(), 1) + ' × ' + fmt(D(), 1) + ' m';
   $('roomList').replaceChildren();
+  const go = $('goRoom');
+  go.replaceChildren(go.options[0]);
   rooms.forEach((r, i) => {
-    const el = document.createElement('span');
-    el.textContent = 'Recinto ' + (i + 1) + ' · ≈ ' + fmt(r.area) + ' m²';
+    const label = 'Recinto ' + (i + 1) + ' · ≈ ' + fmt(r.area) + ' m²',
+      el = document.createElement('span');
+    el.textContent = label;
     $('roomList').appendChild(el);
+    go.appendChild(new Option(label, i));
   });
   $('buildReport').hidden = !report;
   if (report) $('reportText').textContent = report;

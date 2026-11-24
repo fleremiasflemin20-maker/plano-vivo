@@ -62,6 +62,14 @@ try {
     walk() {
       return false;
     },
+    goTo() {
+      return false;
+    },
+    placeAhead() {},
+    setPlacing() {},
+    setGhost() {},
+    isWalking: () => false,
+    setOnPlace() {},
     top() {},
     png() {
       throw Error('WebGL no disponible');
