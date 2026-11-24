@@ -42,9 +42,22 @@ jobs:
       - name: Run backend tests
         run: python -m unittest backend.test_backend -v
 
-  deploy:
+  # Upload and deployment run as separate jobs (GitHub's recommended layout): the
+  # deploy job starts once the artifact is fully stored, which avoids "Fetching
+  # artifact metadata failed" when both steps share a job.
+  build:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: [test-js, test-python]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -54,11 +67,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
