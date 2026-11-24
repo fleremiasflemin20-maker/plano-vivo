@@ -107,6 +107,7 @@ export function recognizePlan(rgba, W, H, progress = () => {}) {
   if (mode === 'lines') {
     ({ walls, wallWidth } = lineDrawingWalls(thinLines, w, h, strokes.thin));
   }
+  walls = withoutSheetFrame(walls, w, h);
   if (walls.length < 3) return null;
 
   // Scale bars are dark and often heavier than linework: look for them in all the
@@ -344,4 +345,55 @@ export function recognizePlan(rgba, W, H, progress = () => {}) {
 }
 
 const WIDE_OPENING_M = 1.6;
+
+/**
+ * Drawing sheets often have a border frame: long lines near the image edges enclosing
+ * everything. It is not a wall. A side counts as frame when it covers most of the
+ * sheet and no wall joins it (an exterior wall has partitions meeting it; a frame
+ * has paper around it). Three such sides are required, so a tightly cropped building
+ * keeps its exterior walls.
+ */
+function withoutSheetFrame(walls, w, h) {
+  const near = 0.08,
+    span = 0.8;
+  const side = (o, test) => {
+    const size = o === 'h' ? w : h,
+      pieces = walls
+        .filter((q) => q.o === o && test(q) && q.s1 - q.s0 >= 0.15 * size)
+        .sort((p, q) => p.s0 - q.s0);
+    let covered = 0,
+      end = -Infinity;
+    for (const q of pieces) {
+      covered += Math.max(0, q.s1 - Math.max(q.s0, end));
+      end = Math.max(end, q.s1);
+    }
+    if (covered < span * size) return [];
+    // Something joins it: a perpendicular wall ending on its centre line, away from
+    // the corners (where the other frame sides meet it).
+    const lo = Math.min(...pieces.map((q) => q.s0)) + 0.05 * size,
+      hi = Math.max(...pieces.map((q) => q.s1)) - 0.05 * size,
+      joined = walls.some(
+        (r) =>
+          r.o !== o &&
+          r.c > lo &&
+          r.c < hi &&
+          pieces.some(
+            (q) =>
+              r.c >= q.s0 &&
+              r.c <= q.s1 &&
+              Math.min(Math.abs(r.s0 - q.c), Math.abs(r.s1 - q.c)) <= (q.t + r.t) / 2 + 2,
+          ),
+      );
+    return joined ? [] : pieces;
+  };
+  const sides = [
+    side('h', (q) => q.c < near * h),
+    side('h', (q) => q.c > (1 - near) * h),
+    side('v', (q) => q.c < near * w),
+    side('v', (q) => q.c > (1 - near) * w),
+  ].filter((s) => s.length);
+  if (sides.length < 3) return walls;
+  const frame = new Set(sides.flat());
+  return walls.filter((q) => !frame.has(q));
+}
 const fmtM = (v) => v.toLocaleString('es', { maximumFractionDigits: 2 });

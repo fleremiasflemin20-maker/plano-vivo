@@ -15,6 +15,9 @@ import {
   slantedPixels,
 } from './raster.mjs';
 
+// Narrowest stroke (px, at working resolution) that can be a wall.
+const MIN_WALL = 3;
+
 // Ridge widths come out mostly odd (2·d − 1), so smooth over ±2 bins.
 const smooth = (hist, i) => {
   let n = 0;
@@ -35,6 +38,9 @@ export function analyseStrokes(marks, w, h) {
     totalInk = 0;
   for (let i = 1; i < hist.length; i++) {
     totalInk += hist[i] * i;
+    // Hairlines (1–2 px: dashes, outlines, hatching) can add up to as much ink as the
+    // walls in detailed plans, but a wall is never that thin at working resolution.
+    if (i < MIN_WALL) continue;
     const ink = smooth(hist, i) * i;
     if (ink > best) {
       best = ink;
@@ -43,7 +49,8 @@ export function analyseStrokes(marks, w, h) {
   }
   // The ink weighting pulls the peak towards wider bins; settle on the raw peak nearby.
   const around = wall;
-  for (let j = around - 2; j <= around + 2; j++) if ((hist[j] || 0) > hist[wall]) wall = j;
+  for (let j = Math.max(MIN_WALL, around - 2); j <= around + 2; j++)
+    if ((hist[j] || 0) > hist[wall]) wall = j;
   let thin = 1;
   for (let i = 1; i < Math.max(2, wall * 0.6); i++)
     if (smooth(hist, i) > smooth(hist, thin)) thin = i;

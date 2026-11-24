@@ -321,10 +321,39 @@ function checkDiagonal(ppm) {
   console.log(`Diagonal ${ppm} px/m:`, r.stats);
 }
 
+/** A drawing-sheet border as heavy as the walls must not become walls. */
+function checkSheetFrame(ppm) {
+  const plan = syntheticPlan(ppm),
+    { rgba, W, H } = plan,
+    t = Math.round(0.3 * ppm),
+    m = Math.round(0.02 * W);
+  const ink = (x, y) => {
+    const k = (y * W + x) * 4;
+    rgba[k] = rgba[k + 1] = rgba[k + 2] = 0;
+  };
+  for (let y = m; y < H - m; y++)
+    for (let x = m; x < W - m; x++)
+      if (x < m + t || x >= W - m - t || y < m + t || y >= H - m - t) ink(x, y);
+  const r = recognizePlan(rgba, W, H),
+    label = `framed plan at ${ppm} px/m`;
+  assert.ok(r, `${label}: not recognised`);
+  const frame = r.walls.filter((w) => {
+    const long = Math.max(Math.abs(w.a.x - w.b.x), Math.abs(w.a.y - w.b.y)) > 0.8,
+      edge =
+        [w.a.x, w.a.y, w.b.x, w.b.y].every((v) => v < 0.06 || v > 0.94) ||
+        (Math.abs(w.a.x - w.b.x) < 0.01 && (w.a.x < 0.06 || w.a.x > 0.94)) ||
+        (Math.abs(w.a.y - w.b.y) < 0.01 && (w.a.y < 0.06 || w.a.y > 0.94));
+    return w.type === 'wall' && long && edge;
+  });
+  assert.equal(frame.length, 0, `${label}: sheet frame kept as ${frame.length} walls`);
+  assert.equal(r.stats.doors, 2, `${label}: ${r.stats.doors} doors`);
+}
+
 // 35 px/m ≈ a 490 px wide web thumbnail (upscaled internally); 140 px/m ≈ a scan.
 export function runRecognitionTests() {
   for (const ppm of [35, 140]) check(ppm);
   for (const ppm of [40, 120]) checkDiagonal(ppm);
+  checkSheetFrame(70);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
   runRecognitionTests();
