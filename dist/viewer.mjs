@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.js';
 import { nearest, FURNITURE } from './geometry.mjs';
+import { blocked as walkBlocked, move as walkMove, roomSpot as walkRoomSpot } from './walk.mjs';
 export function createViewer(container, onStatus) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#e8eeea');
@@ -31,7 +32,11 @@ export function createViewer(container, onStatus) {
     position = new THREE.Vector3(),
     keys = {},
     floorTexture = null,
-    decals = [];
+    decals = [],
+    ghost = false,
+    placing = null,
+    onPlace = null;
+  const raycaster = new THREE.Raycaster();
   const mat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.82 });
   function box(w, h, d, x, y, z, material, rotation = 0, name = '') {
     if (w <= 0 || h <= 0 || d <= 0) return;
@@ -135,7 +140,8 @@ export function createViewer(container, onStatus) {
           uz = dz / L,
           cx = x + ((ext.b - ext.a) / 2) * ux,
           cz = z + ((ext.b - ext.a) / 2) * uz;
-        box(L + ext.a + ext.b, h, t, cx, h / 2, cz, m, rot, 'Pared ' + s.id);
+        const wall = box(L + ext.a + ext.b, h, t, cx, h / 2, cz, m, rot, 'Pared ' + s.id);
+        if (wall) wall.userData.wall = s.id;
       } else {
         const sill = s.type === 'window' ? Math.min(s.sill ?? 0.9, h) : 0,
           opening = Math.min(s.openHeight || (s.type === 'window' ? 1.2 : 2.1), h - sill);
@@ -384,48 +390,126 @@ export function createViewer(container, onStatus) {
       camera.updateProjectionMatrix();
     }
   }
+  const $el = (id) => document.getElementById(id);
+  function orbitHelp() {
+    $el('modelhelp').textContent = placing
+      ? `Haz clic en una pared para añadir una ${placing === 'door' ? 'puerta' : 'ventana'} · Esc cancela`
+      : 'Arrastra para girar · Rueda para acercarte';
+  }
   function reset() {
     walking = false;
-    document.getElementById('movement').hidden = true;
-    document.getElementById('modebadge').textContent = 'PERSPECTIVA';
-    document.getElementById('modelhelp').textContent = 'Arrastra para girar · Rueda para acercarte';
+    $el('movement').hidden = true;
+    $el('walktools').hidden = true;
+    $el('crosshair').hidden = true;
+    $el('modelpane').classList.remove('walking');
+    $el('modebadge').textContent = 'PERSPECTIVA';
+    orbitHelp();
     radius = Math.max(model?.W || 12, model?.D || 9) * 1.65;
     yaw = 0.65;
     pitch = 0.85;
   }
-  function blocked(x, z) {
-    if (!model) return true;
-    const { W, D, T, walls } = model;
-    if (Math.abs(x) > W / 2 || Math.abs(z) > D / 2) return true;
-    return walls.some(
-      (s) =>
-        s.type !== 'door' &&
-        nearest({ x: x / W + 0.5, y: z / D + 0.5 }, s, W, D).d < (s.thickness || T) / 2 + 0.16,
-    );
+  const blocked = (x, z) => walkBlocked(model, x, z, ghost),
+    roomSpot = (room) => walkRoomSpot(model, room);
+  function move(dx, dz) {
+    const p = walkMove(model, { x: position.x, z: position.z }, dx, dz, ghost);
+    position.x = p.x;
+    position.z = p.z;
+  }
+  function startAt(p) {
+    position.set((p.x - 0.5) * model.W, 1.65, (p.y - 0.5) * model.D);
+    walking = true;
+    lookPitch = 0;
+    $el('movement').hidden = false;
+    $el('walktools').hidden = false;
+    $el('crosshair').hidden = false;
+    $el('modelpane').classList.add('walking');
+    if (placing) setPlacing(null);
+    $el('modebadge').textContent = ghost ? 'RECORRIDO · SIN CHOQUES' : 'RECORRIDO';
+    $el('modelhelp').textContent =
+      'WASD o flechas · Arrastra para mirar · P puerta · V ventana · Esc para salir';
   }
   function walk() {
     if (!model?.walls.length) return false;
-    let candidates = model.rooms.map((r) => r.center);
+    const wasGhost = ghost;
+    ghost = false;
+    let candidates = model.rooms.map(roomSpot).filter(Boolean);
     for (let y = 0.1; y < 0.95; y += 0.1)
       for (let x = 0.1; x < 0.95; x += 0.1) candidates.push({ x, y });
     const p = candidates.find((p) => !blocked((p.x - 0.5) * model.W, (p.y - 0.5) * model.D));
+    ghost = wasGhost;
     if (!p) {
       onStatus('No se encontró espacio libre para iniciar. Revisa las paredes.');
       return false;
     }
-    position.set((p.x - 0.5) * model.W, 1.65, (p.y - 0.5) * model.D);
-    walking = true;
     yaw = 0;
-    lookPitch = 0;
-    document.getElementById('movement').hidden = false;
-    document.getElementById('modebadge').textContent = 'RECORRIDO';
-    document.getElementById('modelhelp').textContent =
-      'WASD o flechas · Arrastra para mirar · Esc para salir';
+    startAt(p);
     return true;
   }
+  /** Jump into room `i` (index in model.rooms), starting the walk if needed. */
+  function goTo(i) {
+    const room = model?.rooms[i],
+      p = room && roomSpot(room);
+    if (!p) return false;
+    startAt(p);
+    return true;
+  }
+  /** First wall hit by a ray through `ndc` (−1…1 screen coordinates), or null. */
+  function pick(ndc, maxDistance = Infinity) {
+    if (!model) return null;
+    raycaster.setFromCamera(ndc, camera);
+    raycaster.far = maxDistance;
+    const hit = raycaster.intersectObjects(group.children, false)[0];
+    raycaster.far = Infinity;
+    if (!hit) return null;
+    return {
+      id: hit.object.userData.wall ?? null,
+      point: { x: hit.point.x / model.W + 0.5, y: hit.point.z / model.D + 0.5 },
+    };
+  }
+  function place(type, target) {
+    if (!target?.id) {
+      onStatus(
+        walking
+          ? 'Mira de frente a una pared cercana (la mira debe quedar sobre ella).'
+          : 'Haz clic sobre una pared.',
+      );
+      return false;
+    }
+    return onPlace?.(type, target.id, target.point) ?? false;
+  }
+  /** Walk mode: put an opening where the crosshair (screen centre) meets a wall. */
+  function placeAhead(type) {
+    return place(type, pick({ x: 0, y: 0 }, 8));
+  }
+  function setPlacing(type) {
+    placing = type || null;
+    renderer.domElement.style.cursor = placing ? 'crosshair' : '';
+    document
+      .querySelectorAll('[data-place]')
+      .forEach((b) => b.classList.toggle('active', b.dataset.place === placing));
+    if (!walking) orbitHelp();
+  }
+  function setGhost(on) {
+    ghost = !!on;
+    if (walking) $el('modebadge').textContent = ghost ? 'RECORRIDO · SIN CHOQUES' : 'RECORRIDO';
+  }
+  let pressed = null;
   renderer.domElement.addEventListener('pointerdown', (e) => {
     drag = { x: e.clientX, y: e.clientY };
+    pressed = { x: e.clientX, y: e.clientY };
     renderer.domElement.setPointerCapture(e.pointerId);
+  });
+  renderer.domElement.addEventListener('click', (e) => {
+    const moved = pressed && Math.hypot(e.clientX - pressed.x, e.clientY - pressed.y) > 5;
+    if (!placing || walking || moved) return;
+    const r = renderer.domElement.getBoundingClientRect();
+    place(
+      placing,
+      pick({
+        x: ((e.clientX - r.left) / r.width) * 2 - 1,
+        y: -((e.clientY - r.top) / r.height) * 2 + 1,
+      }),
+    );
   });
   renderer.domElement.addEventListener('pointermove', (e) => {
     if (!drag) return;
@@ -448,7 +532,22 @@ export function createViewer(container, onStatus) {
   );
   window.addEventListener('keydown', (e) => {
     if (e.target.matches('input,select,textarea') || document.querySelector('dialog[open]')) return;
-    if (e.key === 'Escape') reset();
+    if (e.key === 'Escape') {
+      if (walking) reset();
+      else if (placing) setPlacing(null);
+      else reset();
+    }
+    if (
+      walking &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.repeat &&
+      (e.key === 'p' || e.key === 'v' || e.key === 'P' || e.key === 'V')
+    ) {
+      e.preventDefault();
+      placeAhead(e.key.toLowerCase() === 'p' ? 'door' : 'window');
+      return;
+    }
     if (walking) {
       keys[e.key.toLowerCase()] = true;
       if (e.key.startsWith('Arrow')) e.preventDefault();
@@ -474,8 +573,7 @@ export function createViewer(container, onStatus) {
         step = (2.2 * dt) / Math.max(1, Math.hypot(f, s)),
         dx = (-Math.sin(yaw) * f + Math.cos(yaw) * s) * step,
         dz = (-Math.cos(yaw) * f - Math.sin(yaw) * s) * step;
-      if (!blocked(position.x + dx, position.z)) position.x += dx;
-      if (!blocked(position.x, position.z + dz)) position.z += dz;
+      move(dx, dz);
       camera.position.copy(position);
       camera.lookAt(
         position.x - Math.sin(yaw) * Math.cos(lookPitch),
@@ -499,6 +597,13 @@ export function createViewer(container, onStatus) {
     resize,
     reset,
     walk,
+    goTo,
+    placeAhead,
+    setPlacing,
+    setGhost,
+    isWalking: () => walking,
+    /** fn(type, wallId, point) → true when the opening was added. */
+    setOnPlace: (fn) => (onPlace = fn),
     top: () => {
       reset();
       pitch = 1.56;

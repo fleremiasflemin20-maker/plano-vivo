@@ -547,17 +547,21 @@ function erase(raw) {
 }
 
 /** Split a wall into wall + opening + wall around the clicked point. */
-function insertOpening(raw, type) {
-  const w = hit(raw);
+export function insertOpening(raw, type, wall = hit(raw)) {
+  const w = wall;
   if (!w || w.type !== 'wall') {
-    say('Selecciona una pared. Puedes ajustar la abertura después con Seleccionar.');
-    return;
+    say(
+      w
+        ? 'Ahí ya hay una abertura. Elige una parte de la pared sin puerta ni ventana.'
+        : 'Selecciona una pared. Puedes ajustar la abertura después con Seleccionar.',
+    );
+    return false;
   }
   const L = length(w, W(), D()),
     size = type === 'door' ? 0.9 : 1.2;
   if (L < size + 0.1) {
     say('La pared es demasiado corta para esta abertura.');
-    return;
+    return false;
   }
   checkpoint();
   const { t: projection } = nearest(raw, w, W(), D()),
@@ -573,6 +577,7 @@ function insertOpening(raw, type) {
     ...[before, opening, after].filter((s) => length(s, W(), D()) > 0.005),
   );
   rebuild();
+  return true;
 }
 
 /** Two-click tools: wall, rectangle, measure and scale. */

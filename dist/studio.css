@@ -626,3 +626,75 @@ body.busy .tools {
   padding: 8px;
   margin: 10px 0;
 }
+
+/* 3D openings and walk tools */
+.view-actions [data-place].active {
+  background: #246e4e;
+  color: white;
+}
+#crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  pointer-events: none;
+  border-radius: 50%;
+  border: 2px solid #ffffffe6;
+  box-shadow:
+    0 0 0 1px #16392a66,
+    inset 0 0 0 1px #16392a66;
+}
+#crosshair::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px #16392a66;
+}
+.walktools {
+  position: absolute;
+  right: 14px;
+  bottom: 45px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  width: 250px;
+  font-size: 11px;
+  background: #ffffffd9;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px #16392a1f;
+}
+.walktools[hidden] {
+  display: none;
+}
+.walktools label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.walktools select {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  padding: 4px;
+}
+.walk-place {
+  display: flex;
+  gap: 4px;
+}
+.walk-place button {
+  flex: 1;
+  white-space: nowrap;
+  font-size: 11px;
+  padding: 6px;
+}
+#modelpane.walking [data-place] {
+  display: none;
+}

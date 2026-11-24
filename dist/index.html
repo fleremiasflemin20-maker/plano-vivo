@@ -337,8 +337,16 @@
             <div class="pane-label">VISTA ESPACIAL <span id="modebadge">PERSPECTIVA</span></div>
             <div id="render"></div>
             <div class="view-actions">
-              <button id="resetcam">Centrar</button><button id="topcam">Desde arriba</button>
+              <button data-place="door" title="Clic en una pared del modelo para añadir una puerta">
+                + Puerta</button
+              ><button
+                data-place="window"
+                title="Clic en una pared del modelo para añadir una ventana"
+              >
+                + Ventana</button
+              ><button id="resetcam">Centrar</button><button id="topcam">Desde arriba</button>
             </div>
+            <div id="crosshair" hidden aria-hidden="true"></div>
             <div class="compass">N<br />◇</div>
             <div class="pane-bottom" id="modelhelp">Arrastra para girar · Rueda para acercarte</div>
             <div id="movement" hidden>
@@ -349,6 +357,22 @@
                 ><button data-move="d" aria-label="Derecha">→</button>
               </div>
               <button id="exitwalk">Salir del recorrido</button>
+            </div>
+            <div id="walktools" class="walktools" hidden>
+              <label
+                >Ir a
+                <select id="goRoom" aria-label="Ir a un recinto">
+                  <option value="">Elegir recinto…</option>
+                </select></label
+              >
+              <div class="walk-place">
+                <button id="walkDoor" title="Añade una puerta donde apunta la mira (P)">
+                  + Puerta · P</button
+                ><button id="walkWindow" title="Añade una ventana donde apunta la mira (V)">
+                  + Ventana · V
+                </button>
+              </div>
+              <label class="check"><input type="checkbox" id="ghost" /> Atravesar paredes</label>
             </div>
           </div>
         </div>

@@ -19,7 +19,14 @@ import {
   syncHistory,
   autosave,
 } from './ui/core.mjs';
-import { draw, resetPlan, setTool, removeSelected, cancelPending } from './ui/plan.mjs';
+import {
+  draw,
+  resetPlan,
+  setTool,
+  removeSelected,
+  cancelPending,
+  insertOpening,
+} from './ui/plan.mjs';
 import { rebuild, restore, renderModel, setView, demo } from './ui/model.mjs';
 import './ui/build.mjs';
 import './ui/files.mjs';
@@ -57,6 +64,8 @@ window.addEventListener('keydown', (e) => {
   )
     return;
   const key = e.key.toLowerCase();
+  // In the walk, P and V add a door or window (handled by the viewer), not tools.
+  if (viewer.isWalking() && !e.ctrlKey && !e.metaKey && (key === 'p' || key === 'v')) return;
   if ((e.ctrlKey || e.metaKey) && key === 'z') {
     e.preventDefault();
     $(e.shiftKey ? 'redo' : 'undo').click();
@@ -89,6 +98,44 @@ $('walk').onclick = () => {
     setView('model');
     say('Recorrido activo. Usa WASD o las flechas; arrastra para mirar.');
   }
+};
+
+// --- Openings and navigation in 3D ----------------------------------------
+
+const OPENING = { door: 'Puerta', window: 'Ventana' };
+viewer.setOnPlace((type, id, point) => {
+  const wall = state.walls.find((w) => w.id === id);
+  if (!insertOpening(point, type, wall)) return false;
+  say(
+    OPENING[type] +
+      ' añadida. Ajusta su ancho y altura con Seleccionar en el plano, o deshaz con Ctrl Z.',
+  );
+  return true;
+});
+document.querySelectorAll('[data-place]').forEach((b) => {
+  b.onclick = () => {
+    const type = b.classList.contains('active') ? null : b.dataset.place;
+    viewer.setPlacing(type);
+    if (type) say('Haz clic sobre una pared del modelo 3D. Esc para terminar.');
+  };
+});
+$('walkDoor').onclick = () => viewer.placeAhead('door');
+$('walkWindow').onclick = () => viewer.placeAhead('window');
+$('ghost').onchange = (e) => {
+  viewer.setGhost(e.target.checked);
+  say(
+    e.target.checked
+      ? 'Atraviesas las paredes. Desactívalo para volver a chocar con ellas.'
+      : 'Vuelves a chocar con las paredes.',
+  );
+};
+$('goRoom').onchange = (e) => {
+  const i = e.target.value;
+  e.target.value = '';
+  if (i === '') return;
+  if (viewer.goTo(Number(i))) setView('model');
+  else say('No encontré un lugar libre en ese recinto.');
+  e.target.blur();
 };
 $('calibrate').onclick = () => {
   setView('plan');
