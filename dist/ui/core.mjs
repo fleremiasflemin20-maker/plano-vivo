@@ -46,6 +46,13 @@ export const state = {
   pythonJob: null,
   pythonRun: 0,
   loadEpoch: 0,
+  // Professional data (all optional in saved projects)
+  roomTags: [], // named points: { x, y, name }, normalised; a room takes the name inside it
+  grid: null, // structural axes { xs: [m], ys: [m] } from the sheet's top-left corner
+  columns: [], // { x, y, b, h }: centre normalised, section in metres
+  slab: { thickness: 0.2, show: false },
+  typed: '', // length typed while drawing
+  flash: null, // point of the plan highlighted by the technical review
 };
 
 const MAX_UNDO = 60;
@@ -97,6 +104,10 @@ export function project() {
     filename: $('filename').textContent,
     report: state.report,
     analysis: state.analysis,
+    roomTags: structuredClone(state.roomTags),
+    grid: structuredClone(state.grid),
+    columns: structuredClone(state.columns),
+    slab: { ...state.slab },
   };
 }
 

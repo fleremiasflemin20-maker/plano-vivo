@@ -26,11 +26,13 @@ import {
   removeSelected,
   cancelPending,
   insertOpening,
+  typeKey,
 } from './ui/plan.mjs';
 import { rebuild, restore, renderModel, setView, demo } from './ui/model.mjs';
 import './ui/build.mjs';
 import './ui/files.mjs';
 import './ui/feedback.mjs';
+import './ui/pro.mjs';
 
 $('pythonPanel').hidden = !localEngine;
 $('exportIFC').hidden = !localEngine;
@@ -63,6 +65,7 @@ window.addEventListener('keydown', (e) => {
     state.busy
   )
     return;
+  if (typeKey(e)) return;
   const key = e.key.toLowerCase();
   // In the walk, P and V add a door or window (handled by the viewer), not tools.
   if (viewer.isWalking() && !e.ctrlKey && !e.metaKey && (key === 'p' || key === 'v')) return;

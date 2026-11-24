@@ -193,6 +193,42 @@ export function createViewer(container, onStatus) {
         }
       }
     }
+    // Structure: columns (full height) and an optional roof/floor slab over the walls.
+    for (const c of data.columns || [])
+      box(c.b, H, c.h, (c.x - 0.5) * W, H / 2, (c.y - 0.5) * D, mat('#b8bcb6'), 0, 'Columna');
+    if (data.slab?.show && walls.length) {
+      let x0 = Infinity,
+        x1 = -Infinity,
+        z0 = Infinity,
+        z1 = -Infinity;
+      for (const s of walls)
+        for (const p of [s.a, s.b]) {
+          x0 = Math.min(x0, (p.x - 0.5) * W);
+          x1 = Math.max(x1, (p.x - 0.5) * W);
+          z0 = Math.min(z0, (p.y - 0.5) * D);
+          z1 = Math.max(z1, (p.y - 0.5) * D);
+        }
+      const e = data.slab.thickness,
+        pad = T / 2;
+      const slab = box(
+        x1 - x0 + 2 * pad,
+        e,
+        z1 - z0 + 2 * pad,
+        (x0 + x1) / 2,
+        H + e / 2,
+        (z0 + z1) / 2,
+        new THREE.MeshStandardMaterial({
+          color: '#8f9a93',
+          roughness: 0.9,
+          transparent: true,
+          opacity: 0.55,
+          depthWrite: false,
+        }),
+        0,
+        'Losa',
+      );
+      if (slab) slab.castShadow = false;
+    }
     const extent = Math.max(W, D);
     Object.assign(sun.shadow.camera, {
       left: -extent,

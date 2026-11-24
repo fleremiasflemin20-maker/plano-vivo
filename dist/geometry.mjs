@@ -198,7 +198,11 @@ export function validateFeatures(features) {
   }
 }
 
-export function toDXF(walls, W, D, features = []) {
+/**
+ * DXF in metres (y up). `extra` adds the professional layers: EJES (axes with their names),
+ * COLUMNAS (section outlines) and AMBIENTES (room names and areas).
+ */
+export function toDXF(walls, W, D, features = [], extra = {}) {
   let lines = [
     '0',
     'SECTION',
@@ -289,6 +293,60 @@ export function toDXF(walls, W, D, features = []) {
         else line(layer, x0 + f.w * t, y0, x0 + f.w * t, y1);
       }
   }
+  const text = (layer, x, y, h, value) =>
+    lines.push(
+      '0',
+      'TEXT',
+      '8',
+      layer,
+      '10',
+      String(x * W),
+      '20',
+      String((1 - y) * D),
+      '30',
+      '0',
+      '40',
+      String(h),
+      '1',
+      value,
+    );
+  const { grid, columns = [], rooms = [], names = [] } = extra;
+  if (grid) {
+    const letters = (i) => {
+      let s = '',
+        n = i;
+      do {
+        s = String.fromCharCode(65 + (n % 26)) + s;
+        n = Math.floor(n / 26) - 1;
+      } while (n >= 0);
+      return s;
+    };
+    grid.xs.forEach((m, i) => {
+      line('EJES', m / W, 0, m / W, 1);
+      text('EJES', m / W, -0.3 / D, 0.3, String(i + 1));
+    });
+    grid.ys.forEach((m, i) => {
+      line('EJES', 0, m / D, 1, m / D);
+      text('EJES', -0.5 / W, m / D, 0.3, letters(i));
+    });
+  }
+  for (const c of columns) {
+    const bx = c.b / 2 / W,
+      hy = c.h / 2 / D;
+    line('COLUMNAS', c.x - bx, c.y - hy, c.x + bx, c.y - hy);
+    line('COLUMNAS', c.x + bx, c.y - hy, c.x + bx, c.y + hy);
+    line('COLUMNAS', c.x + bx, c.y + hy, c.x - bx, c.y + hy);
+    line('COLUMNAS', c.x - bx, c.y + hy, c.x - bx, c.y - hy);
+  }
+  rooms.forEach((r, i) =>
+    text(
+      'AMBIENTES',
+      r.center.x,
+      r.center.y,
+      0.2,
+      (names[i] || 'R' + (i + 1)) + ' ' + r.area.toFixed(2) + ' m2',
+    ),
+  );
   lines.push('0', 'ENDSEC', '0', 'EOF');
   return lines.join('\n');
 }

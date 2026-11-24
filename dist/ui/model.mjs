@@ -1,5 +1,6 @@
 // Recomputes rooms/quantities, refreshes the 3D model and restores saved projects.
 import { quantities, findRooms, validateProject } from '../geometry.mjs';
+import { validatePro, roomTitle } from '../pro.mjs';
 import {
   $,
   W,
@@ -44,6 +45,8 @@ export function renderModel() {
     floorColor: $('floorMaterial').value,
     imageFloor: $('imageFloor').checked,
     selected: state.selected,
+    columns: state.columns,
+    slab: state.slab,
   });
 }
 
@@ -67,7 +70,7 @@ function renderSummary(q) {
   const go = $('goRoom');
   go.replaceChildren(go.options[0]);
   rooms.forEach((r, i) => {
-    const label = 'Recinto ' + (i + 1) + ' · ≈ ' + fmt(r.area) + ' m²',
+    const label = roomTitle(r, i, state.roomTags) + ' · ≈ ' + fmt(r.area) + ' m²',
       el = document.createElement('span');
     el.textContent = label;
     $('roomList').appendChild(el);
@@ -93,6 +96,7 @@ export function rebuild(save = true) {
 /** Load a project object (saved JSON, local version or undo entry). */
 export async function restore(data, save = true) {
   validateProject(data);
+  validatePro(data);
   state.sourceFile = null;
   state.analysis = data.analysis || null;
   let img = state.bg;
@@ -107,6 +111,11 @@ export async function restore(data, save = true) {
   state.bg = img;
   state.walls = data.walls.map((w) => ({ ...w, id: w.id || uid() }));
   state.features = (data.features || []).map((f) => ({ ...f, id: f.id || uid() }));
+  state.roomTags = structuredClone(data.roomTags || []);
+  state.grid = data.grid ? structuredClone(data.grid) : null;
+  state.columns = structuredClone(data.columns || []);
+  state.slab = data.slab ? { ...data.slab } : { thickness: 0.2, show: false };
+  state.flash = null;
   state.scaleAssumed = false;
   $('width').value = data.width;
   $('depth').value = (data.width * data.ratio).toFixed(5);
@@ -131,6 +140,10 @@ export async function restore(data, save = true) {
 export function clearProject() {
   state.walls = [];
   state.features = [];
+  state.roomTags = [];
+  state.grid = null;
+  state.columns = [];
+  state.flash = null;
   state.bg = null;
   state.sourceFile = null;
   state.analysis = null;

@@ -698,3 +698,77 @@ body.busy .tools {
 #modelpane.walking [data-place] {
   display: none;
 }
+
+/* Professional tools */
+.pro-h {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4d6b5d;
+}
+.pro-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+.pro-row button {
+  flex: 1;
+  min-width: 0;
+}
+#proPanel label {
+  display: block;
+  margin-top: 4px;
+}
+#reviewList {
+  margin-top: 8px;
+  display: grid;
+  gap: 4px;
+  max-height: 260px;
+  overflow: auto;
+}
+#reviewList button {
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 6px 8px;
+  border-left: 4px solid #9fb8aa;
+}
+#reviewList button.error {
+  border-left-color: #c0392b;
+}
+#reviewList button.aviso {
+  border-left-color: #d99a1e;
+}
+.pro-dialog {
+  width: min(760px, 94vw);
+}
+.pro-dialog table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 8px 0;
+}
+.pro-dialog th,
+.pro-dialog td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #e1e9e4;
+  text-align: left;
+}
+.pro-dialog td.n,
+.pro-dialog th.n {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pro-dialog input.factor {
+  width: 80px;
+}
+.pro-dialog #proBody {
+  max-height: 60vh;
+  overflow: auto;
+}
+#roomDialog label {
+  display: block;
+  margin: 8px 0;
+}

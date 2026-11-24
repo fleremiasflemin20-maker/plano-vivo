@@ -29,7 +29,7 @@ CHORDS = [(48, 52, 55), (43, 47, 50), (45, 48, 52), (41, 45, 48)]
 
 def env(n, attack, release):
     e = np.ones(n)
-    a, r = int(attack * RATE), int(release * RATE)
+    a, r = min(n, int(attack * RATE)), min(n, int(release * RATE))
     if a:
         e[:a] = np.linspace(0, 1, a)
     if r:
