@@ -12,3 +12,6 @@ work-update.py
 *.sqlite3
 .DS_Store
 
+
+# Marketing material (local only: large media files)
+marketing/

@@ -1,4 +1,4 @@
-"""Builds the presentation video: narration (edge-tts), recording (record.js), mix (ffmpeg).
+"""Builds the presentation video: narration (edge-tts), recording (record.cjs), mix (ffmpeg).
 
     cd tools/video
     npm install playwright@1.65.1
@@ -165,5 +165,5 @@ if __name__ == '__main__':
         json.dumps(scenes, ensure_ascii=False, indent=1), encoding='utf-8'
     )
     demo_plans()
-    run('node', 'record.js')
+    run('node', 'record.cjs')
     mix(scenes)
