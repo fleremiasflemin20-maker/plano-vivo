@@ -3,7 +3,7 @@
 ## Ya está listo
 
 - **Web pública:** https://plano-vivo.fleremiasflemin.workers.dev (Cloudflare). La copia en GitHub Pages sigue funcionando.
-- **Video de presentación** (2 min 45 s): botón «▶ Ver cómo funciona» dentro de la app, o el archivo `dist/media/plano-vivo-presentacion.mp4`, con subtítulos en `dist/media/plano-vivo-presentacion.vtt`.
+- **Video de presentación** (2 min 54 s, con música): botón «▶ Ver cómo funciona» dentro de la app, o el archivo `dist/media/plano-vivo-presentacion.mp4`, con subtítulos en `dist/media/plano-vivo-presentacion.vtt`.
 - **Buzón de sugerencias:** botón «Sugerencias» arriba a la derecha. No pide cuenta. Los mensajes se guardan en la base de datos D1 `plano-vivo-sugerencias` de Cloudflare.
 
 Para leer las sugerencias:

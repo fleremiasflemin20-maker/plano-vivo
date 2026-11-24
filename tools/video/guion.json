@@ -2,103 +2,103 @@
  {
   "id": "portada",
   "titulo": "Plano Vivo",
-  "texto": "Esto es Plano Vivo: conviertes un plano en un modelo 3D que puedes recorrer, directamente en tu navegador. Es gratis y no tienes que instalar nada.",
-  "audio": 9.53
+  "texto": "¡Hola! Te presento Plano Vivo: convierte cualquier plano en un modelo 3D que puedes recorrer. ¡Directo en tu navegador, gratis y sin instalar nada!",
+  "audio": 9.58
  },
  {
   "id": "subir",
   "titulo": "1 · Sube tu plano",
-  "texto": "Empieza subiendo una foto o un PDF de tu plano: una imagen de internet, un escaneo o una captura de pantalla.",
-  "audio": 7.13
+  "texto": "Todo empieza aquí: sube una foto o un PDF de tu plano. Sirve una imagen de internet, un escaneo… ¡o hasta una captura de pantalla!",
+  "audio": 8.74
  },
  {
   "id": "construir",
   "titulo": "2 · Construir en 3D",
-  "texto": "Pulsa Construir en 3D. Plano Vivo lee el plano: muros con su grosor, puertas con su lado de giro, ventanas, escaleras, terrazas, muebles y textos. Y saca la escala de la barra gráfica del plano.",
-  "audio": 13.99
+  "texto": "Ahora, la magia: pulsa Construir en 3D. Plano Vivo lee tu plano y encuentra los muros con su grosor, las puertas, las ventanas, las escaleras, la terraza, ¡y hasta los muebles! Y la escala la saca solita de la barra gráfica.",
+  "audio": 14.33
  },
  {
   "id": "modelo",
   "titulo": "3 · Explora el modelo",
-  "texto": "Arrastra para girar el modelo y usa la rueda para acercarte. Con Desde arriba ves la planta completa.",
-  "audio": 6.72
+  "texto": "¡Mira tu casa en 3D! Arrastra para girarla, usa la rueda para acercarte, y con Desde arriba ves toda la planta.",
+  "audio": 7.2
  },
  {
   "id": "dual",
   "titulo": "4 · Vista dual",
-  "texto": "En Vista dual comparas el plano con el modelo, lado a lado. Lo que propuso el reconocimiento queda resaltado para que lo revises.",
-  "audio": 7.97
+  "texto": "En Vista dual tienes el plano y el modelo, lado a lado. Lo que encontró Plano Vivo queda resaltado, para que lo revises en un momento.",
+  "audio": 7.78
  },
  {
   "id": "medidas",
   "titulo": "5 · Medidas y escala",
-  "texto": "Ajusta el ancho del plano, la altura de los muros y su espesor. Si conoces una medida real, calibra la escala marcando dos puntos.",
-  "audio": 8.81
+  "texto": "¿Quieres afinar? Cambia el ancho del plano, la altura de los muros y su espesor. ¿Conoces una medida real? Marca dos puntos y listo: escala calibrada.",
+  "audio": 10.66
  },
  {
   "id": "cantidades",
   "titulo": "6 · Áreas y cantidades",
-  "texto": "Plano Vivo calcula la longitud y el área de los muros, el volumen y el área interior de cada recinto.",
+  "texto": "Y los números, al instante: longitud y área de muros, volumen, ¡y el área de cada habitación!",
   "audio": 6.14
  },
  {
   "id": "materiales",
   "titulo": "7 · Materiales",
-  "texto": "Elige el acabado de las paredes y del piso para presentar tu proyecto.",
-  "audio": 4.37
+  "texto": "¿Arena, concreto, roble? Elige los acabados de paredes y pisos y dale estilo a tu proyecto.",
+  "audio": 6.5
  },
  {
   "id": "recorrido",
   "titulo": "8 · Recorre tu espacio",
-  "texto": "Inicia un recorrido y camina por dentro, a la altura de los ojos. Los muros te detienen, como en la realidad.",
-  "audio": 7.56
+  "texto": "Y ahora, lo mejor: ¡entra y camina por tu casa! A la altura de los ojos, y los muros te detienen, como en la vida real.",
+  "audio": 7.75
  },
  {
   "id": "dibujar",
   "titulo": "9 · Dibuja desde cero",
-  "texto": "También puedes dibujar desde cero: recintos rectangulares, paredes con dos clics, puertas y ventanas. El modelo 3D se actualiza mientras dibujas.",
-  "audio": 9.79
+  "texto": "¿No tienes plano? ¡No importa! Dibújalo desde cero: recintos con dos clics, paredes, puertas y ventanas… y el 3D se arma mientras dibujas.",
+  "audio": 9.89
  },
  {
   "id": "editar",
   "titulo": "10 · Edita con precisión",
-  "texto": "Selecciona cualquier pared para cambiar su longitud, su ángulo, su altura o su espesor. Deshacer y rehacer siempre están a mano.",
-  "audio": 8.38
+  "texto": "Toca cualquier pared y ajusta su largo, su ángulo, su altura o su espesor. ¿Te equivocaste? Deshacer y rehacer, siempre a mano.",
+  "audio": 8.88
  },
  {
   "id": "medir",
   "titulo": "11 · Mide",
-  "texto": "Con la herramienta Medir obtienes la distancia real entre dos puntos.",
-  "audio": 4.2
+  "texto": "Con Medir sabes la distancia real entre dos puntos. ¡Así de fácil!",
+  "audio": 4.94
  },
  {
   "id": "diagonal",
   "titulo": "12 · Muros en diagonal",
-  "texto": "Reconoce también muros en diagonal, como un chaflán, con sus puertas.",
-  "audio": 4.85
+  "texto": "¿Muros en diagonal? ¡También! Como este chaflán, con su puerta incluida.",
+  "audio": 5.93
  },
  {
   "id": "guardar",
   "titulo": "13 · Guarda tu trabajo",
-  "texto": "Tu trabajo se guarda solo en este navegador, con versiones que puedes recuperar. Guarda el proyecto como archivo para abrirlo en otro equipo.",
-  "audio": 8.59
+  "texto": "Tu trabajo se guarda solo, con versiones que puedes recuperar. Y si quieres seguir en otro computador, guarda el proyecto como archivo.",
+  "audio": 7.73
  },
  {
   "id": "exportar",
   "titulo": "14 · Exporta",
-  "texto": "Exporta el plano en DXF o SVG para tu programa de CAD, el modelo 3D en GLB, las cantidades en CSV o una imagen del modelo.",
-  "audio": 8.98
+  "texto": "Cuando termines, llévalo a donde quieras: el plano en DXF o SVG para tu programa de CAD, el 3D en GLB, las cantidades en CSV, o una imagen para compartir.",
+  "audio": 10.34
  },
  {
   "id": "python",
   "titulo": "15 · Motor local para profesionales",
-  "texto": "Para trabajo profesional, instala el motor local en tu computador: lee los vectores de los PDF, reconoce los textos y exporta en IFC para BIM. Tus planos no salen de tu equipo.",
-  "audio": 11.54
+  "texto": "¿Trabajas en arquitectura? Instala el motor local: lee los vectores de los PDF, reconoce los textos y exporta en IFC para BIM. ¡Y tus planos nunca salen de tu equipo!",
+  "audio": 11.14
  },
  {
   "id": "cierre",
   "titulo": "Pruébalo y cuéntanos",
-  "texto": "Plano Vivo está en versión beta. Pruébalo con tus planos y dinos qué mejorar con el botón Sugerencias. No necesitas cuenta.",
-  "audio": 8.64
+  "texto": "Plano Vivo está en beta y queremos mejorarlo contigo. ¡Pruébalo con tus planos y cuéntanos qué te gustaría con el botón Sugerencias! Sin cuentas, sin complicaciones. ¡Te esperamos!",
+  "audio": 11.57
  }
 ]

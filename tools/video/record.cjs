@@ -207,21 +207,21 @@ const OVERLAY = () => {
       await dragModel(180, -30);
     },
     async recorrido() {
-      await click('#walk', 1500);
+      // The walk starts in a room facing its window: step towards it and glance round.
+      await click('#walk', 1600);
       await page.keyboard.down('w');
-      await sleep(900);
+      await sleep(500);
       await page.keyboard.up('w');
-      // Look around slowly by dragging, instead of walking into a wall.
       const b = await page.locator('#render canvas').boundingBox();
-      const x = b.x + b.width * 0.7,
+      const x = b.x + b.width * 0.45,
         y = b.y + b.height * 0.5;
       await at(x, y);
-      await sleep(500);
+      await sleep(400);
       await page.mouse.move(x, y);
       await page.mouse.down();
       for (let i = 1; i <= 40; i++) {
-        await page.mouse.move(x - i * 3, y);
-        await at(x - i * 3, y);
+        await page.mouse.move(x + i * 2.5, y);
+        await at(x + i * 2.5, y);
         await sleep(60);
       }
       await page.mouse.up();

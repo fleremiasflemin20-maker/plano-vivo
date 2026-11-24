@@ -4,7 +4,7 @@ Editor de planos 2D con reconstrucción 3D, recorrido y motor Python local.
 
 **Web:** https://plano-vivo.fleremiasflemin.workers.dev (Cloudflare) · copia en https://fleremiasflemin20-maker.github.io/plano-vivo/
 
-**Video de presentación (2 min 45 s):** botón «▶ Ver cómo funciona» en la web, o [`dist/media/plano-vivo-presentacion.mp4`](dist/media/plano-vivo-presentacion.mp4).
+**Video de presentación (2 min 54 s, con música):** botón «▶ Ver cómo funciona» en la web, o [`dist/media/plano-vivo-presentacion.mp4`](dist/media/plano-vivo-presentacion.mp4).
 
 **Sugerencias:** botón «Sugerencias» en la web, sin cuenta. Plan de lanzamiento y cómo leerlas: [`docs/lanzamiento.md`](docs/lanzamiento.md).
 
@@ -138,7 +138,7 @@ npx wrangler deploy
 
 ### Video
 
-`tools/video/` regenera el video de presentación: guion por escenas (`guion.json`), narración con voz sintética, grabación automática de la web con Playwright y montaje con ffmpeg. Instrucciones en `tools/video/montar.py`.
+`tools/video/` regenera el video de presentación: guion por escenas (`guion.json`), narración con voz sintética, música de fondo original generada por código (`musica.py`, sin derechos de terceros), grabación automática de la web con Playwright y montaje con ffmpeg (la música baja sola cuando habla la voz). Instrucciones en `tools/video/montar.py`.
 
 ## Hoja de ruta pendiente
 
