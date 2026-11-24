@@ -6,6 +6,7 @@ import { detectPlan, detectLargePlan } from './dist/detect.mjs';
 import { runRecognitionTests } from './test-recognize.mjs';
 import { runWorkerTests } from './test-worker.mjs';
 import { runWalkTests } from './test-walk.mjs';
+import { runProTests } from './test-pro.mjs';
 const wall = (x1, y1, x2, y2, type = 'wall') => ({
   a: { x: x1, y: y1 },
   b: { x: x2, y: y2 },
@@ -251,7 +252,8 @@ writeFileSync(
 );
 runRecognitionTests();
 runWalkTests();
+runProTests();
 await runWorkerTests();
 console.log(
-  'Geometry, quantities, legacy import, DXF, blank image, reconstruction, plan recognition, walkthrough and suggestions checks passed.',
+  'Geometry, quantities, legacy import, DXF, blank image, reconstruction, plan recognition, walkthrough, professional tools and suggestions checks passed.',
 );

@@ -278,6 +278,114 @@
           >
         </details>
         <button id="walk" class="wide">Iniciar recorrido</button>
+        <details id="proPanel">
+          <summary>Herramientas profesionales</summary>
+          <p class="hint">
+            Ejes, columnas, losa, cómputos y revisión técnica. Valores referenciales: verifica la
+            norma local.
+          </p>
+          <h3 class="pro-h">Ejes estructurales</h3>
+          <div class="fields">
+            <label
+              >Origen X (m)<input
+                id="gridOx"
+                class="field"
+                type="number"
+                step="0.05"
+                min="0"
+                max="300"
+                value="1" /></label
+            ><label
+              >Origen Y (m)<input
+                id="gridOy"
+                class="field"
+                type="number"
+                step="0.05"
+                min="0"
+                max="300"
+                value="1"
+            /></label>
+          </div>
+          <label
+            >Luces en X, ejes 1, 2, 3… (m)<input
+              id="gridSx"
+              class="field"
+              type="text"
+              placeholder="4, 3.5, 4"
+          /></label>
+          <label
+            >Luces en Y, ejes A, B, C… (m)<input
+              id="gridSy"
+              class="field"
+              type="text"
+              placeholder="3.5, 4"
+          /></label>
+          <div class="pro-row">
+            <button id="gridMake">Trazar ejes</button
+            ><button id="gridClear" class="text">Quitar ejes</button>
+          </div>
+          <h3 class="pro-h">Columnas</h3>
+          <div class="fields">
+            <label
+              >Sección b (m)<input
+                id="colB"
+                class="field"
+                type="number"
+                step="0.05"
+                min="0.1"
+                max="3"
+                value="0.3" /></label
+            ><label
+              >Sección h (m)<input
+                id="colH"
+                class="field"
+                type="number"
+                step="0.05"
+                min="0.1"
+                max="3"
+                value="0.3"
+            /></label>
+          </div>
+          <div class="pro-row">
+            <button id="colMake">Columnas en los cruces</button
+            ><button id="colClear" class="text">Quitar</button>
+          </div>
+          <h3 class="pro-h">Losa</h3>
+          <div class="fields">
+            <label
+              >Espesor (m)<input
+                id="slabT"
+                class="field"
+                type="number"
+                step="0.01"
+                min="0.05"
+                max="0.6"
+                value="0.2" /></label
+            ><label class="check"><input type="checkbox" id="slabShow" /> Ver en 3D</label>
+          </div>
+          <h3 class="pro-h">Precisión del dibujo</h3>
+          <div class="pro-row">
+            <button id="fixJoints" title="Une extremos de muros separados menos de 15 cm">
+              Cerrar uniones</button
+            ><button id="fixStraight" title="Endereza muros desviados menos de 3° de la escuadra">
+              Enderezar muros
+            </button>
+          </div>
+          <p class="hint">
+            Al dibujar un muro, escribe la longitud y pulsa Intro: <b>4.25</b>, <b>425cm</b> o con
+            ángulo <b>3&lt;90</b>.
+          </p>
+          <h3 class="pro-h">Documentación</h3>
+          <div class="pro-row">
+            <button id="proReview" class="primary">Revisión técnica</button
+            ><button id="proTakeoff">Cómputos métricos</button>
+          </div>
+          <div class="pro-row">
+            <button id="proAreas">Cuadro de áreas</button
+            ><button id="proGlossary" class="text">Glosario</button>
+          </div>
+          <div id="reviewList" hidden></div>
+        </details>
         <details>
           <summary>Exportar y recuperar</summary>
           <div class="export-buttons">
@@ -312,7 +420,13 @@
             ><button data-tool="rectangle" title="Cuatro paredes con dos esquinas (R)">
               Rectángulo</button
             ><button data-tool="door">Puerta</button><button data-tool="window">Ventana</button
-            ><button data-tool="measure">Medir</button><button data-tool="erase">Borrar</button>
+            ><button data-tool="measure">Medir</button
+            ><button
+              data-tool="room"
+              title="Clic dentro de un recinto para nombrarlo (sala, dormitorio…)"
+            >
+              Ambiente</button
+            ><button data-tool="erase">Borrar</button>
           </div>
           <div class="history-tools">
             <button id="undo" title="Deshacer · Ctrl Z" aria-label="Deshacer">↶</button
@@ -414,6 +528,26 @@
           Cancelar</button
         ><button value="ok" class="primary">Aplicar</button>
       </form>
+    </dialog>
+    <dialog id="roomDialog">
+      <form method="dialog">
+        <h2>Nombre del ambiente</h2>
+        <p class="hint" id="roomDialogInfo"></p>
+        <label>Tipo<select id="roomType"></select></label>
+        <label>Nombre<input id="roomNameInput" class="field" type="text" maxlength="40" /></label>
+        <button value="remove" formnovalidate>Quitar nombre</button
+        ><button value="cancel" formnovalidate>Cancelar</button
+        ><button value="ok" class="primary">Aplicar</button>
+      </form>
+    </dialog>
+    <dialog id="proDialog" class="pro-dialog">
+      <h2 id="proTitle"></h2>
+      <p class="hint" id="proHint"></p>
+      <div id="proBody"></div>
+      <div class="pro-row">
+        <button id="proCSV">Exportar CSV</button
+        ><button id="proClose" class="primary">Cerrar</button>
+      </div>
     </dialog>
     <dialog id="confirmDialog">
       <form method="dialog">

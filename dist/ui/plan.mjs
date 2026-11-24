@@ -1,5 +1,6 @@
 // 2D plan canvas: drawing, drawing tools, selection and the element inspector.
 import { clamp, length, nearest, FURNITURE } from '../geometry.mjs';
+import { roomTitle, roomName, axisName, parseLength, pointAt } from '../pro.mjs';
 import {
   $,
   num,
@@ -44,6 +45,7 @@ const HINTS = {
   measure: 'Marca dos puntos para medir la distancia',
   erase: 'Haz clic sobre el elemento que quieras borrar',
   scale: 'Marca dos puntos cuya distancia real conozcas',
+  room: 'Haz clic dentro de un recinto para darle nombre (sala, dormitorio, baño…)',
 };
 
 export function resetPlan() {
@@ -345,6 +347,10 @@ function drawPending() {
   ctx.stroke();
   ctx.setLineDash([]);
   $('liveMeasure').hidden = false;
+  if (state.typed) {
+    $('liveMeasure').textContent = 'Longitud: ' + state.typed + ' ↵';
+    return;
+  }
   $('liveMeasure').textContent =
     tool === 'rectangle'
       ? fmt(Math.abs(hover.x - start.x) * W()) +
@@ -390,11 +396,18 @@ export function draw() {
   }
   for (const f of state.features) drawFeature(f);
   for (const w of state.walls) drawWall(w);
-  if ($('showRooms').checked)
-    state.rooms.forEach((room, i) => {
-      const p = screen(room.center);
-      label('R' + (i + 1) + ' · ≈ ' + fmt(room.area) + ' m²', p.x, p.y);
-    });
+  state.rooms.forEach((room, i) => {
+    const named = roomName(room, state.roomTags);
+    if (!named && !$('showRooms').checked) return;
+    const p = screen(room.center);
+    label(
+      roomTitle(room, i, state.roomTags) + ' · ' + fmt(room.area) + ' m²',
+      p.x,
+      p.y,
+      named ? '#1f5c45' : undefined,
+    );
+  });
+  drawStructure();
   drawPending();
   if (state.measure) {
     const a = screen(state.measure.a),
@@ -415,6 +428,62 @@ export function draw() {
     );
   }
   label(fmt(W(), 1) + ' m', fit.x + fit.w / 2, fit.y + fit.h + 22);
+  if (state.flash) {
+    const p = screen(state.flash);
+    ctx.strokeStyle = '#d0402b';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 16, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+/** Structural axes (dash-dot, with name bubbles) and columns (filled sections). */
+function drawStructure() {
+  const g = state.grid;
+  if (g) {
+    ctx.save();
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([10, 3, 2, 3]);
+    const bubble = (text, x, y) => {
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(x, y, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#c0392b';
+      ctx.font = 'bold 10px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(text, x, y + 3.5);
+      ctx.setLineDash([10, 3, 2, 3]);
+    };
+    g.xs.forEach((m, i) => {
+      const x = fit.x + (m / W()) * fit.w;
+      ctx.beginPath();
+      ctx.moveTo(x, fit.y - 14);
+      ctx.lineTo(x, fit.y + fit.h);
+      ctx.stroke();
+      bubble(axisName('x', i), x, fit.y - 24);
+    });
+    g.ys.forEach((m, i) => {
+      const y = fit.y + (m / D()) * fit.h;
+      ctx.beginPath();
+      ctx.moveTo(fit.x - 14, y);
+      ctx.lineTo(fit.x + fit.w, y);
+      ctx.stroke();
+      bubble(axisName('y', i), fit.x - 24, y);
+    });
+    ctx.restore();
+  }
+  ctx.fillStyle = '#5b6560';
+  for (const c of state.columns) {
+    const p = screen(c),
+      bw = (c.b / W()) * fit.w,
+      bh = (c.h / D()) * fit.h;
+    ctx.fillRect(p.x - bw / 2, p.y - bh / 2, bw, bh);
+  }
 }
 
 export function setTool(t) {
@@ -422,6 +491,7 @@ export function setTool(t) {
   state.start = null;
   state.hover = null;
   state.measure = null;
+  state.typed = '';
   if (t !== 'select') state.selected = null;
   document
     .querySelectorAll('[data-tool]')
@@ -495,7 +565,53 @@ export function removeSelected() {
 export function cancelPending() {
   state.start = null;
   state.measure = null;
+  state.typed = '';
+  state.flash = null;
   draw();
+}
+
+/**
+ * Keys typed while drawing a wall or a measure: a length (and optional angle) for the
+ * next point. Returns true when the key was used.
+ */
+export function typeKey(e) {
+  if (
+    !state.start ||
+    !['wall', 'measure', 'scale'].includes(state.tool) ||
+    e.ctrlKey ||
+    e.metaKey ||
+    e.altKey
+  )
+    return false;
+  if (e.key === 'Enter') {
+    const v = parseLength(state.typed);
+    if (!state.typed) return false;
+    e.preventDefault();
+    if (!v) {
+      say('Longitud no válida. Ejemplos: 4.25 · 425cm · 3<90 (ángulo en grados).');
+      return true;
+    }
+    const end = pointAt(state.start, v, state.hover, W(), D());
+    if (!end || [end.x, end.y].some((n) => n < 0 || n > 1)) {
+      say('Ese punto queda fuera de la hoja. Amplía las dimensiones del proyecto.');
+      return true;
+    }
+    placeAt(end);
+    return true;
+  }
+  if (e.key === 'Backspace' && state.typed) {
+    e.preventDefault();
+    state.typed = state.typed.slice(0, -1);
+    draw();
+    return true;
+  }
+  if (/^[0-9.,<@cmM-]$/.test(e.key) && (state.typed || /[0-9.,]/.test(e.key))) {
+    e.preventDefault();
+    state.typed = (state.typed + e.key).slice(0, 16);
+    draw();
+    return true;
+  }
+  return false;
 }
 
 // --- Pointer tools -------------------------------------------------------
@@ -582,8 +698,12 @@ export function insertOpening(raw, type, wall = hit(raw)) {
 
 /** Two-click tools: wall, rectangle, measure and scale. */
 function placePoint(e) {
-  const end = point(e, true),
-    { start, tool } = state;
+  placeAt(point(e, true));
+}
+
+function placeAt(end) {
+  const { start, tool } = state;
+  state.typed = '';
   if (!start) {
     state.start = end;
     state.hover = end;
@@ -645,6 +765,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (tool === 'select') startSelect(e, raw);
   else if (tool === 'erase') erase(raw);
   else if (tool === 'door' || tool === 'window') insertOpening(raw, tool);
+  else if (tool === 'room') canvas.dispatchEvent(new CustomEvent('roompick', { detail: raw }));
   else placePoint(e);
 });
 

@@ -1,5 +1,6 @@
 // Project files (save/open/new/demo), local versions and exports.
 import { quantities, validateProject, toDXF } from '../geometry.mjs';
+import { roomName } from '../pro.mjs';
 import * as storage from '../storage.mjs';
 import {
   $,
@@ -170,11 +171,21 @@ function quantitiesCSV() {
 
 $('exportDXF').onclick = () => {
   download(
-    new Blob([toDXF(state.walls, W(), D(), state.features)], { type: 'application/dxf' }),
+    new Blob(
+      [
+        toDXF(state.walls, W(), D(), state.features, {
+          grid: state.grid,
+          columns: state.columns,
+          rooms: state.rooms,
+          names: state.rooms.map((r) => roomName(r, state.roomTags)),
+        }),
+      ],
+      { type: 'application/dxf' },
+    ),
     'plano-vivo.dxf',
   );
   say(
-    'DXF exportado en metros: capas MUROS, PUERTAS, VENTANAS, ESCALERAS, TERRAZAS, MUEBLES y TEXTOS.',
+    'DXF exportado en metros: capas MUROS, PUERTAS, VENTANAS, ESCALERAS, TERRAZAS, MUEBLES, TEXTOS, EJES, COLUMNAS y AMBIENTES.',
   );
 };
 
