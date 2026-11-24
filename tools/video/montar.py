@@ -1,4 +1,5 @@
-"""Builds the presentation video: narration (edge-tts), recording (record.cjs), mix (ffmpeg).
+"""Builds the presentation video: narration (edge-tts), recording (record.cjs), original
+background music (musica.py), mix with the music ducking under the voice (ffmpeg).
 
     cd tools/video
     npm install playwright@1.65.1
@@ -33,7 +34,9 @@ def narration(scenes):
             '--voice',
             VOICE,
             '--rate',
-            '+4%',
+            '+12%',
+            '--pitch',
+            '+6Hz',
             '--text',
             s['texto'],
             '--write-media',
@@ -99,7 +102,32 @@ def mix(scenes):
         d = t['start'] + 350
         filters.append(f'[{i}:a]adelay={d}|{d}[a{i}]')
         labels.append(f'[a{i}]')
-    filters.append(''.join(labels) + f'amix=inputs={len(labels)}:normalize=0,apad[aout]')
+    # Voice over original background music (musica.py), which ducks under the voice.
+    seconds = float(
+        run(
+            'ffprobe',
+            '-v',
+            'error',
+            '-show_entries',
+            'format=duration',
+            '-of',
+            'csv=p=0',
+            'raw.webm',
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    run('python', 'musica.py', str(round(seconds + 1, 2)), 'musica.wav')
+    music = len(timeline) + 1
+    inputs += ['-i', 'musica.wav']
+    filters.append(''.join(labels) + f'amix=inputs={len(labels)}:normalize=0,asplit=2[voz][guia]')
+    filters.append(f'[{music}:a]volume=0.20[mus]')
+    filters.append(
+        '[mus][guia]sidechaincompress=threshold=0.015:ratio=5:attack=25:release=450[fondo]'
+    )
+    filters.append(
+        '[voz][fondo]amix=inputs=2:normalize=0,volume=3.5dB,alimiter=limit=0.8,apad[aout]'
+    )
     MEDIA.mkdir(exist_ok=True)
     out = MEDIA / 'plano-vivo-presentacion.mp4'
     run(

@@ -1,52 +1,52 @@
 WEBVTT
 
-00:00.350 --> 00:09.880
-Esto es Plano Vivo: conviertes un plano en un modelo 3D que puedes recorrer, directamente en tu navegador. Es gratis y no tienes que instalar nada.
+00:00:00.350 --> 00:00:09.930
+¡Hola! Te presento Plano Vivo: convierte cualquier plano en un modelo 3D que puedes recorrer. ¡Directo en tu navegador, gratis y sin instalar nada!
 
-00:10.591 --> 00:17.721
-Empieza subiendo una foto o un PDF de tu plano: una imagen de internet, un escaneo o una captura de pantalla.
+00:00:10.631 --> 00:00:19.371
+Todo empieza aquí: sube una foto o un PDF de tu plano. Sirve una imagen de internet, un escaneo… ¡o hasta una captura de pantalla!
 
-00:18.431 --> 00:32.421
-Pulsa Construir en 3D. Plano Vivo lee el plano: muros con su grosor, puertas con su lado de giro, ventanas, escaleras, terrazas, muebles y textos. Y saca la escala de la barra gráfica del plano.
+00:00:20.074 --> 00:00:34.404
+Ahora, la magia: pulsa Construir en 3D. Plano Vivo lee tu plano y encuentra los muros con su grosor, las puertas, las ventanas, las escaleras, la terraza, ¡y hasta los muebles! Y la escala la saca solita de la barra gráfica.
 
-00:33.121 --> 00:39.841
-Arrastra para girar el modelo y usa la rueda para acercarte. Con Desde arriba ves la planta completa.
+00:00:35.105 --> 00:00:42.305
+¡Mira tu casa en 3D! Arrastra para girarla, usa la rueda para acercarte, y con Desde arriba ves toda la planta.
 
-00:41.216 --> 00:49.186
-En Vista dual comparas el plano con el modelo, lado a lado. Lo que propuso el reconocimiento queda resaltado para que lo revises.
+00:00:43.161 --> 00:00:50.941
+En Vista dual tienes el plano y el modelo, lado a lado. Lo que encontró Plano Vivo queda resaltado, para que lo revises en un momento.
 
-00:49.897 --> 00:58.707
-Ajusta el ancho del plano, la altura de los muros y su espesor. Si conoces una medida real, calibra la escala marcando dos puntos.
+00:00:51.651 --> 00:01:02.311
+¿Quieres afinar? Cambia el ancho del plano, la altura de los muros y su espesor. ¿Conoces una medida real? Marca dos puntos y listo: escala calibrada.
 
-00:59.416 --> 01:05.556
-Plano Vivo calcula la longitud y el área de los muros, el volumen y el área interior de cada recinto.
+00:01:03.012 --> 00:01:09.152
+Y los números, al instante: longitud y área de muros, volumen, ¡y el área de cada habitación!
 
-01:06.258 --> 01:10.628
-Elige el acabado de las paredes y del piso para presentar tu proyecto.
+00:01:09.855 --> 00:01:16.355
+¿Arena, concreto, roble? Elige los acabados de paredes y pisos y dale estilo a tu proyecto.
 
-01:12.134 --> 01:19.694
-Inicia un recorrido y camina por dentro, a la altura de los ojos. Los muros te detienen, como en la realidad.
+00:01:17.060 --> 00:01:24.810
+Y ahora, lo mejor: ¡entra y camina por tu casa! A la altura de los ojos, y los muros te detienen, como en la vida real.
 
-01:20.403 --> 01:30.193
-También puedes dibujar desde cero: recintos rectangulares, paredes con dos clics, puertas y ventanas. El modelo 3D se actualiza mientras dibujas.
+00:01:25.520 --> 00:01:35.410
+¿No tienes plano? ¡No importa! Dibújalo desde cero: recintos con dos clics, paredes, puertas y ventanas… y el 3D se arma mientras dibujas.
 
-01:40.640 --> 01:49.020
-Selecciona cualquier pared para cambiar su longitud, su ángulo, su altura o su espesor. Deshacer y rehacer siempre están a mano.
+00:01:45.653 --> 00:01:54.533
+Toca cualquier pared y ajusta su largo, su ángulo, su altura o su espesor. ¿Te equivocaste? Deshacer y rehacer, siempre a mano.
 
-01:49.898 --> 01:54.098
-Con la herramienta Medir obtienes la distancia real entre dos puntos.
+00:01:55.234 --> 00:02:00.174
+Con Medir sabes la distancia real entre dos puntos. ¡Así de fácil!
 
-01:54.805 --> 01:59.655
-Reconoce también muros en diagonal, como un chaflán, con sus puertas.
+00:02:00.875 --> 00:02:06.805
+¿Muros en diagonal? ¡También! Como este chaflán, con su puerta incluida.
 
-02:03.745 --> 02:12.335
-Tu trabajo se guarda solo en este navegador, con versiones que puedes recuperar. Guarda el proyecto como archivo para abrirlo en otro equipo.
+00:02:09.531 --> 00:02:17.261
+Tu trabajo se guarda solo, con versiones que puedes recuperar. Y si quieres seguir en otro computador, guarda el proyecto como archivo.
 
-02:13.037 --> 02:22.017
-Exporta el plano en DXF o SVG para tu programa de CAD, el modelo 3D en GLB, las cantidades en CSV o una imagen del modelo.
+00:02:17.967 --> 00:02:28.307
+Cuando termines, llévalo a donde quieras: el plano en DXF o SVG para tu programa de CAD, el 3D en GLB, las cantidades en CSV, o una imagen para compartir.
 
-02:22.722 --> 02:34.262
-Para trabajo profesional, instala el motor local en tu computador: lee los vectores de los PDF, reconoce los textos y exporta en IFC para BIM. Tus planos no salen de tu equipo.
+00:02:29.010 --> 00:02:40.150
+¿Trabajas en arquitectura? Instala el motor local: lee los vectores de los PDF, reconoce los textos y exporta en IFC para BIM. ¡Y tus planos nunca salen de tu equipo!
 
-02:34.966 --> 02:43.606
-Plano Vivo está en versión beta. Pruébalo con tus planos y dinos qué mejorar con el botón Sugerencias. No necesitas cuenta.
+00:02:40.865 --> 00:02:52.435
+Plano Vivo está en beta y queremos mejorarlo contigo. ¡Pruébalo con tus planos y cuéntanos qué te gustaría con el botón Sugerencias! Sin cuentas, sin complicaciones. ¡Te esperamos!
