@@ -1049,3 +1049,7 @@ body.busy .tools {
   width: 100%;
   font: inherit;
 }
+
+#guideLayer.lock {
+  pointer-events: auto;
+}
