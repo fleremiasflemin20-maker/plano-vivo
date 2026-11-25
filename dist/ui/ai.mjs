@@ -10,6 +10,8 @@ import {
   styleFinishes,
   layoutProgram,
   restyle,
+  obstaclesFrom,
+  withoutRecognizedFurniture,
 } from '../interior.mjs';
 import { inRoom, roomName, roomTitle } from '../pro.mjs';
 import { findRooms } from '../geometry.mjs';
@@ -183,6 +185,8 @@ function applyScene(scene) {
   const style = STYLES[scene.estilo] ? scene.estilo : 'calido',
     st = STYLES[style];
   state.interiorStyle = style;
+  // Real furniture replaces the plan's recognised furniture blocks (never both).
+  if (!scene.vacio) state.features = withoutRecognizedFurniture(state.features, state.rooms);
   const items = [],
     finishes = [];
   for (const [room, a] of pairRooms(scene.ambientes)) {
@@ -199,13 +203,17 @@ function applyScene(scene) {
     });
     if (scene.vacio) continue;
     const wanted = a.muebles?.length ? [...new Set(a.muebles.map((m) => m.tipo))] : null;
-    let placed = furnishRoom(room, a.tipo, state.walls, W(), D(), style);
+    const obstacles = obstaclesFrom(state.features, state.columns, W(), D());
+    let placed = furnishRoom(room, a.tipo, state.walls, W(), D(), style, null, 0, obstacles);
     if (wanted) {
       // Keep the layout's pieces the photo shows, then add the ones the layout did not include.
       const extra = wanted.filter((k) => !placed.some((it) => it.kind === k));
       placed = placed.filter((it) => wanted.includes(it.kind) || it.kind === 'rug');
       for (const k of extra) {
-        const it = placeExtra(k, room, placed, W(), D());
+        const it = placeExtra(k, room, placed, W(), D(), undefined, {
+          walls: state.walls,
+          obstacles,
+        });
         if (it) placed.push(it);
       }
       for (const m of a.muebles)
@@ -368,6 +376,7 @@ async function applyChange(text) {
         st = STYLES[c.estilo || state.interiorStyle];
       if (c.vaciar) state.items = state.items.filter((it) => !inRoom(it, room));
       if (c.reacomodar) {
+        state.features = withoutRecognizedFurniture(state.features, [room]);
         const kinds = [
             ...new Set(state.items.filter((it) => inRoom(it, room)).map((it) => it.kind)),
           ],
@@ -387,6 +396,7 @@ async function applyChange(text) {
           c.estilo || state.interiorStyle,
           kinds.length ? kinds : null,
           variant,
+          obstaclesFrom(state.features, state.columns, W(), D()),
         ).map((it) => ({ ...it, ...(colors[it.kind] ? { color: colors[it.kind] } : {}) }));
         state.items = state.items.filter((it) => !inRoom(it, room)).concat(next);
       }
@@ -397,7 +407,10 @@ async function applyChange(text) {
       for (const m of c.recolorear)
         state.items.forEach((it) => inRoom(it, room) && it.kind === m.tipo && (it.color = m.color));
       for (const m of c.agregar) {
-        const it = placeExtra(m.tipo, room, state.items, W(), D(), m.color);
+        const it = placeExtra(m.tipo, room, state.items, W(), D(), m.color, {
+          walls: state.walls,
+          obstacles: obstaclesFrom(state.features, state.columns, W(), D()),
+        });
         if (it) state.items.push(it);
       }
       if (c.pared || c.piso || c.estilo) {

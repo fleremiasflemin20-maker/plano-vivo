@@ -17,6 +17,9 @@ import {
   validateInterior,
   itemList,
   STYLES,
+  TALL,
+  obstaclesFrom,
+  withoutRecognizedFurniture,
 } from './dist/interior.mjs';
 import { cleanScene, cleanChange, ROUTES, KINDS } from './worker/ai.js';
 import worker from './worker/index.js';
@@ -26,6 +29,115 @@ const SITE = 'https://plano-vivo.fleremiasflemin.workers.dev';
 export async function runInteriorTests() {
   // Every AI furniture id exists in the 3D catalogue and the other way round.
   assert.deepEqual([...KINDS].sort(), Object.keys(CATALOG).sort());
+
+  // Common sense, like an architect: nothing on top of anything else, nothing in a door's
+  // swing or on the stairs, nothing tall in front of a window, every room with its basics.
+  const box = (it, W, D) => {
+    const r = Math.abs(Math.sin((it.rot * Math.PI) / 180)) > 0.5,
+      w = r ? it.d : it.w,
+      d = r ? it.w : it.d;
+    return {
+      x0: it.x * W - w / 2,
+      x1: it.x * W + w / 2,
+      y0: it.y * D - d / 2,
+      y1: it.y * D + d / 2,
+    };
+  };
+  const hit = (p, q, m = 0.02) =>
+    p.x0 < q.x1 - m && q.x0 < p.x1 - m && p.y0 < q.y1 - m && q.y0 < p.y1 - m;
+  const seat = (k) => /chair/.test(k),
+    under = (k) => /table|round|desk/.test(k);
+  const programs = [
+    [
+      { tipo: 'Sala-comedor', area: 22 },
+      { tipo: 'Cocina', area: 10 },
+      { tipo: 'Dormitorio principal', area: 14 },
+      { tipo: 'Dormitorio', area: 10 },
+      { tipo: 'Baño', area: 5 },
+    ],
+    [
+      { tipo: 'Sala-comedor', area: 28 },
+      { tipo: 'Cocina', area: 9 },
+      { tipo: 'Dormitorio principal', area: 13 },
+      { tipo: 'Dormitorio', area: 10 },
+      { tipo: 'Baño', area: 4.5 },
+      { tipo: 'Baño', area: 3.5 },
+    ],
+    [
+      { tipo: 'Sala', area: 16 },
+      { tipo: 'Comedor', area: 10 },
+      { tipo: 'Cocina', area: 8 },
+      { tipo: 'Dormitorio principal', area: 12 },
+      { tipo: 'Dormitorio', area: 9 },
+      { tipo: 'Estudio', area: 8 },
+    ],
+  ];
+  for (const prog of programs) {
+    const L = layoutProgram(prog),
+      rooms = findRooms(L.walls, L.W, L.D, 0.15);
+    // A stair block in the living room and a recognised furniture block in every room.
+    const big = rooms.find((r) => /^Sala/.test(roomName(r, L.tags))).runs[0];
+    const stair = { type: 'stair', x: big.x, y: big.y, w: 0.9 / L.W, h: 2.4 / L.D };
+    const blocks = rooms.map((r) => {
+      const q = r.runs[Math.floor(r.runs.length / 2)];
+      return { type: 'furniture', x: q.x + q.w / 4, y: q.y + q.h / 4, w: q.w / 2, h: q.h / 2 };
+    });
+    const features = withoutRecognizedFurniture([stair, ...blocks], rooms);
+    assert.deepEqual(features, [stair], 'recognised furniture is replaced, stairs stay');
+    const obstacles = obstaclesFrom(features, [], L.W, L.D);
+    const items = furnishAll(rooms, L.tags, L.walls, L.W, L.D, 'calido', obstacles);
+    const solid = items.filter((it) => it.kind !== 'rug');
+    for (let i = 0; i < solid.length; i++)
+      for (let j = i + 1; j < solid.length; j++) {
+        const a = solid[i],
+          b = solid[j];
+        if ((seat(a.kind) && under(b.kind)) || (seat(b.kind) && under(a.kind))) continue;
+        if (/coffee/.test(a.kind) || /coffee/.test(b.kind)) continue;
+        assert.ok(!hit(box(a, L.W, L.D), box(b, L.W, L.D)), `${a.kind} on top of ${b.kind}`);
+      }
+    const st = obstacles[0];
+    for (const it of solid) {
+      const p = box(it, L.W, L.D);
+      assert.ok(
+        !hit(p, { x0: st.x0 * L.W, x1: st.x1 * L.W, y0: st.y0 * L.D, y1: st.y1 * L.D }, 0.01),
+        `${it.kind} on the stairs`,
+      );
+      if (TALL.has(it.kind))
+        for (const w of L.walls.filter((w) => w.type === 'window')) {
+          const m = { x: ((w.a.x + w.b.x) / 2) * L.W, y: ((w.a.y + w.b.y) / 2) * L.D };
+          assert.ok(
+            !(m.x > p.x0 - 0.2 && m.x < p.x1 + 0.2 && m.y > p.y0 - 0.2 && m.y < p.y1 + 0.2),
+            `${it.kind} in front of a window`,
+          );
+        }
+      for (const w of L.walls.filter((w) => w.type === 'door')) {
+        const m = { x: ((w.a.x + w.b.x) / 2) * L.W, y: ((w.a.y + w.b.y) / 2) * L.D };
+        assert.ok(
+          !(m.x > p.x0 - 0.3 && m.x < p.x1 + 0.3 && m.y > p.y0 - 0.3 && m.y < p.y1 + 0.3),
+          `${it.kind} blocks a door`,
+        );
+      }
+    }
+    // The basics a designer never leaves out.
+    const has = (name, kinds) => {
+      const r = rooms.find((r) => roomName(r, L.tags) === name);
+      if (!r) return;
+      const inside = items.filter((it) => inRoom(it, r)).map((it) => it.kind);
+      assert.ok(
+        kinds.some((k) => inside.includes(k)),
+        `${name} without ${kinds.join(' / ')}: ${inside.join(', ')}`,
+      );
+    };
+    has('Dormitorio principal', ['bed_double']);
+    has('Dormitorio', ['bed_single', 'bed_double']);
+    has('Dormitorio', ['wardrobe']);
+    has('Cocina', ['kitchen_counter']);
+    has('Baño', ['toilet']);
+    has('Comedor', ['dining_table', 'dining_round']);
+    has('Sala-comedor', ['dining_table', 'dining_round']);
+    has('Sala-comedor', ['sofa', 'sofa_l']);
+    has('Sala', ['sofa', 'sofa_l']);
+  }
 
   // Plan from a room program: rooms found, all named, doors/windows, clean review.
   const L = layoutProgram([
