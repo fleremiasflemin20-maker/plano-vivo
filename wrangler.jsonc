@@ -2,6 +2,8 @@
 // suggestions endpoint (worker/index.js → D1).
 //   Deploy:            npx wrangler deploy
 //   Read suggestions:  npx wrangler d1 execute plano-vivo-sugerencias --remote --command "SELECT * FROM sugerencias ORDER BY id DESC LIMIT 50"
+//   Admin panel:       /admin (needs the secret: npx wrangler secret put ADMIN_TOKEN)
+//   New tables:        npx wrangler d1 migrations apply plano-vivo-sugerencias --remote
 {
   "name": "plano-vivo",
   "main": "worker/index.js",
@@ -9,7 +11,7 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"],
+    "run_worker_first": ["/api/*", "/admin", "/admin/"],
   },
   "d1_databases": [
     {
@@ -19,12 +21,17 @@
       "migrations_dir": "migrations",
     },
   ],
-  // Five suggestions per minute per visitor.
+  // Five suggestions (or failed admin logins) per minute per visitor; 60 usage events.
   "ratelimits": [
     {
       "name": "LIMITER",
       "namespace_id": "1001",
       "simple": { "limit": 5, "period": 60 },
+    },
+    {
+      "name": "EVENTS",
+      "namespace_id": "1002",
+      "simple": { "limit": 60, "period": 60 },
     },
   ],
 }

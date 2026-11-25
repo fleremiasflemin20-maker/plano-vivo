@@ -7,6 +7,7 @@ import { runRecognitionTests } from './test-recognize.mjs';
 import { runWorkerTests } from './test-worker.mjs';
 import { runWalkTests } from './test-walk.mjs';
 import { runProTests } from './test-pro.mjs';
+import { runAnalyticsTests } from './test-analytics.mjs';
 const wall = (x1, y1, x2, y2, type = 'wall') => ({
   a: { x: x1, y: y1 },
   b: { x: x2, y: y2 },
@@ -254,6 +255,7 @@ runRecognitionTests();
 runWalkTests();
 runProTests();
 await runWorkerTests();
+await runAnalyticsTests();
 console.log(
-  'Geometry, quantities, legacy import, DXF, blank image, reconstruction, plan recognition, walkthrough, professional tools and suggestions checks passed.',
+  'Geometry, quantities, legacy import, DXF, blank image, reconstruction, plan recognition, walkthrough, professional tools, suggestions and usage statistics checks passed.',
 );

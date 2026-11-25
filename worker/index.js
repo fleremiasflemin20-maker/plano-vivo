@@ -1,6 +1,10 @@
-// Cloudflare Worker: serves the static site (dist/) and receives suggestions from the
-// in-app form (POST /api/sugerencias), stored in D1. No accounts, no cookies, no IP
-// addresses stored; the client IP is only used, unstored, by the rate limiter.
+// Cloudflare Worker: serves the static site (dist/), receives suggestions from the
+// in-app form (POST /api/sugerencias) and anonymous usage events (POST /api/evento),
+// stored in D1, and serves the admin panel (/admin + GET /api/admin/resumen).
+// No accounts, no cookies, no IP addresses stored: the IP is only used, unstored, by the
+// rate limiters and inside a daily one-way hash (see analytics.js).
+import { recordEvent, summary, sameToken } from './analytics.js';
+import { ADMIN_HTML } from './admin.js';
 
 const SITES = [
   'https://plano-vivo.fleremiasflemin.workers.dev',
@@ -35,10 +39,71 @@ export function parseSuggestion(body) {
   return { kind, message, contact: contact || null, rating, version: version || null };
 }
 
+const ip = (request) => request.headers.get('CF-Connecting-IP') || 'anon';
+
+async function handleEvent(request, env, cors, allowed) {
+  if (request.method !== 'POST') return json({ error: 'Método no permitido.' }, 405, cors);
+  if (!allowed) return json({ error: 'Origen no permitido.' }, 403, cors);
+  if (Number(request.headers.get('Content-Length') || 0) > 600)
+    return json({ error: 'Demasiado largo.' }, 413, cors);
+  if (env.EVENTS) {
+    const { success } = await env.EVENTS.limit({ key: ip(request) });
+    if (!success) return json({ ok: true }, 202, cors); // quietly dropped
+  }
+  let body;
+  try {
+    const raw = await request.text();
+    if (raw.length > 600) return json({ error: 'Demasiado largo.' }, 413, cors);
+    body = JSON.parse(raw);
+  } catch {
+    return json({ error: 'Evento no válido.' }, 400, cors);
+  }
+  const ok = await recordEvent(env, request, body);
+  return ok ? json({ ok: true }, 202, cors) : json({ error: 'Evento no válido.' }, 422, cors);
+}
+
+async function handleAdmin(request, env, url) {
+  const noStore = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' };
+  if (!env.ADMIN_TOKEN)
+    return json(
+      {
+        error:
+          'Panel sin configurar: crea el secreto ADMIN_TOKEN (npx wrangler secret put ADMIN_TOKEN).',
+      },
+      503,
+      noStore,
+    );
+  const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!sameToken(token, env.ADMIN_TOKEN)) {
+    // Slow down guessing: failed attempts share the suggestions limiter (5 per minute).
+    if (env.LIMITER) {
+      const { success } = await env.LIMITER.limit({ key: 'admin:' + ip(request) });
+      if (!success) return json({ error: 'Demasiados intentos. Espera un minuto.' }, 429, noStore);
+    }
+    return json({ error: 'Clave incorrecta.' }, 401, noStore);
+  }
+  return json(await summary(env, Number(url.searchParams.get('dias')) || 30), 200, noStore);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname !== '/api/sugerencias') return env.ASSETS.fetch(request);
+    if (url.pathname === '/admin' || url.pathname === '/admin/')
+      return new Response(ADMIN_HTML, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store',
+          'X-Robots-Tag': 'noindex',
+          'X-Frame-Options': 'DENY',
+          'Referrer-Policy': 'no-referrer',
+        },
+      });
+    if (url.pathname === '/api/admin/resumen') {
+      if (request.method !== 'GET') return json({ error: 'Método no permitido.' }, 405);
+      return handleAdmin(request, env, url);
+    }
+    if (url.pathname !== '/api/sugerencias' && url.pathname !== '/api/evento')
+      return env.ASSETS.fetch(request);
 
     const origin = request.headers.get('Origin') || '',
       allowed = origin === url.origin || SITES.includes(origin) || LOCAL.test(origin),
@@ -52,6 +117,7 @@ export default {
         : {};
     if (request.method === 'OPTIONS')
       return new Response(null, { status: allowed ? 204 : 403, headers: cors });
+    if (url.pathname === '/api/evento') return handleEvent(request, env, cors, allowed);
     if (request.method !== 'POST') return json({ error: 'Método no permitido.' }, 405, cors);
     if (!allowed) return json({ error: 'Origen no permitido.' }, 403, cors);
     if (Number(request.headers.get('Content-Length') || 0) > MAX_BODY)
