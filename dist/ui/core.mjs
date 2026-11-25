@@ -51,6 +51,12 @@ export const state = {
   grid: null, // structural axes { xs: [m], ys: [m] } from the sheet's top-left corner
   columns: [], // { x, y, b, h }: centre normalised, section in metres
   slab: { thickness: 0.2, show: false },
+  // Interior design (optional in saved projects)
+  items: [], // furniture { id, kind, x, y, rot, w, d, h, color?, color2? }
+  finishes: [], // per room { x, y, floor, wall }, a point inside the room
+  interiorStyle: 'calido',
+  selectedItem: null,
+  cutaway: true, // low walls in the 3D view when there is furniture (not saved)
   typed: '', // length typed while drawing
   flash: null, // point of the plan highlighted by the technical review
 };
@@ -77,6 +83,9 @@ try {
     setGhost() {},
     isWalking: () => false,
     setOnPlace() {},
+    setOnSelect() {},
+    setCutaway() {},
+    isCutaway: () => false,
     top() {},
     png() {
       throw Error('WebGL no disponible');
@@ -108,6 +117,9 @@ export function project() {
     grid: structuredClone(state.grid),
     columns: structuredClone(state.columns),
     slab: { ...state.slab },
+    items: structuredClone(state.items),
+    finishes: structuredClone(state.finishes),
+    interiorStyle: state.interiorStyle,
   };
 }
 

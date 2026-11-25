@@ -1,6 +1,7 @@
 // 2D plan canvas: drawing, drawing tools, selection and the element inspector.
 import { clamp, length, nearest, FURNITURE } from '../geometry.mjs';
 import { roomTitle, roomName, axisName, parseLength, pointAt } from '../pro.mjs';
+import { CATALOG } from '../furniture3d.mjs';
 import {
   $,
   num,
@@ -395,6 +396,7 @@ export function draw() {
         );
   }
   for (const f of state.features) drawFeature(f);
+  drawItems();
   for (const w of state.walls) drawWall(w);
   state.rooms.forEach((room, i) => {
     const named = roomName(room, state.roomTags);
@@ -436,6 +438,67 @@ export function draw() {
     ctx.arc(p.x, p.y, 16, 0, Math.PI * 2);
     ctx.stroke();
   }
+}
+
+/** Corners of a furniture item on the sheet (normalised), rotated. */
+function itemCorners(it) {
+  const r = ((it.rot || 0) * Math.PI) / 180,
+    c = Math.cos(r),
+    s = Math.sin(r);
+  return [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+  ].map(([a, b]) => {
+    const x = (a * it.w) / 2,
+      y = (b * it.d) / 2;
+    return { x: it.x + (x * c - y * s) / W(), y: it.y + (x * s + y * c) / D() };
+  });
+}
+
+/** Furniture in plan: outline, light fill, a mark on its front and the name if it fits. */
+function drawItems() {
+  const order = [...state.items].sort(
+    (p, q) => (p.kind === 'rug' ? -1 : 0) - (q.kind === 'rug' ? -1 : 0),
+  );
+  for (const it of order) {
+    const pts = itemCorners(it).map(screen),
+      sel = it.id === state.selectedItem;
+    ctx.beginPath();
+    pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.closePath();
+    ctx.fillStyle =
+      it.kind === 'rug' ? '#efe6d855' : (it.color || CATALOG[it.kind]?.main || '#ddd') + 'aa';
+    ctx.fill();
+    ctx.strokeStyle = sel ? '#16865c' : '#9a7a55';
+    ctx.lineWidth = sel ? 2.5 : 1;
+    ctx.stroke();
+    // front edge (between corners 2 and 3) a little thicker
+    ctx.beginPath();
+    ctx.moveTo(pts[2].x, pts[2].y);
+    ctx.lineTo(pts[3].x, pts[3].y);
+    ctx.lineWidth = sel ? 3 : 1.6;
+    ctx.stroke();
+    const cx = (pts[0].x + pts[2].x) / 2,
+      cy = (pts[0].y + pts[2].y) / 2;
+    if (sel || (Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) > 46 && it.kind !== 'rug'))
+      label(CATALOG[it.kind]?.name || 'Mueble', cx, cy + 4, '#7a5a35');
+  }
+}
+
+/** Topmost furniture item under a normalised point (rugs last), or null. */
+export function hitItem(p) {
+  const inside = (it) => {
+    const r = (-(it.rot || 0) * Math.PI) / 180,
+      dx = (p.x - it.x) * W(),
+      dy = (p.y - it.y) * D(),
+      x = dx * Math.cos(r) - dy * Math.sin(r),
+      y = dx * Math.sin(r) + dy * Math.cos(r);
+    return Math.abs(x) <= it.w / 2 && Math.abs(y) <= it.d / 2;
+  };
+  const hits = state.items.filter(inside);
+  return hits.find((it) => it.kind !== 'rug') || hits[0] || null;
 }
 
 /** Structural axes (dash-dot, with name bubbles) and columns (filled sections). */
@@ -617,6 +680,29 @@ export function typeKey(e) {
 // --- Pointer tools -------------------------------------------------------
 
 function startSelect(e, raw) {
+  const item = hitItem(raw);
+  if (item && !(hit(raw) && item.kind === 'rug')) {
+    state.selectedItem = item.id;
+    state.selected = null;
+    drag = {
+      kind: 'item',
+      item,
+      from: raw,
+      orig: { x: item.x, y: item.y },
+      moved: false,
+      snapshot: project(),
+    };
+    canvas.setPointerCapture(e.pointerId);
+    canvas.dispatchEvent(new CustomEvent('itemselect', { detail: item.id }));
+    updateInspector();
+    draw();
+    renderModel();
+    return;
+  }
+  if (state.selectedItem) {
+    state.selectedItem = null;
+    canvas.dispatchEvent(new CustomEvent('itemselect', { detail: null }));
+  }
   const w = hit(raw);
   state.selected = w?.id || null;
   updateInspector();
@@ -776,6 +862,16 @@ canvas.addEventListener('pointermove', (e) => {
     draw();
     return;
   }
+  if (drag?.kind === 'item') {
+    const p = rawPoint(e),
+      it = drag.item;
+    it.x = clamp(drag.orig.x + p.x - drag.from.x, 0, 1);
+    it.y = clamp(drag.orig.y + p.y - drag.from.y, 0, 1);
+    drag.moved = true;
+    draw();
+    renderModel();
+    return;
+  }
   if (drag?.kind === 'edit') {
     const raw = point(e, false),
       o = drag.original;
@@ -805,6 +901,10 @@ canvas.addEventListener('pointermove', (e) => {
 });
 
 canvas.addEventListener('pointerup', () => {
+  if (drag?.kind === 'item' && drag.moved) {
+    checkpoint(drag.snapshot);
+    rebuild();
+  }
   if (drag?.kind === 'edit' && drag.moved) {
     checkpoint(drag.snapshot);
     rebuild();

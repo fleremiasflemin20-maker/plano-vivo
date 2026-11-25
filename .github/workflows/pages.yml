@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '22'
       - name: Check formatting
-        run: npx --yes prettier@3.9.10 --check "dist/**/*.{mjs,js,css,html}" "worker/*.js" test.mjs test-recognize.mjs test-worker.mjs test-walk.mjs test-pro.mjs test-analytics.mjs
+        run: npx --yes prettier@3.9.10 --check "dist/**/*.{mjs,js,css,html}" "worker/*.js" test.mjs test-recognize.mjs test-worker.mjs test-walk.mjs test-pro.mjs test-analytics.mjs test-interior.mjs
       - name: Verify JavaScript and geometry
         run: |
           for f in dist/*.mjs dist/ui/*.mjs dist/recognize/*.mjs worker/*.js; do node --check "$f"; done

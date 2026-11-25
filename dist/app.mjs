@@ -33,6 +33,9 @@ import './ui/build.mjs';
 import './ui/files.mjs';
 import './ui/feedback.mjs';
 import './ui/pro.mjs';
+import './ui/interior.mjs';
+import './ui/ai.mjs';
+import { openShared } from './ui/share.mjs';
 import './ui/stats.mjs';
 import './ui/guide.mjs';
 
@@ -194,3 +197,4 @@ try {
   demo();
 }
 syncHistory();
+openShared();

@@ -30,7 +30,7 @@ const csvCell = (v) =>
 let csvRows = null,
   csvName = 'plano-vivo.csv';
 
-function openDialog(title, hint, html, rows, name) {
+export function openDialog(title, hint, html, rows, name) {
   $('proTitle').textContent = title;
   $('proHint').textContent = hint;
   $('proBody').innerHTML = html;

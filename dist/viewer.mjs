@@ -1,6 +1,8 @@
 import * as THREE from './vendor/three.js';
 import { nearest, FURNITURE } from './geometry.mjs';
+import { buildItem } from './furniture3d.mjs';
 import { blocked as walkBlocked, move as walkMove, roomSpot as walkRoomSpot } from './walk.mjs';
+const CUT = 1.15; // cutaway wall height (m)
 export function createViewer(container, onStatus) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#e8eeea');
@@ -34,8 +36,12 @@ export function createViewer(container, onStatus) {
     floorTexture = null,
     decals = [],
     ghost = false,
+    // Cutaway: in the orbit view walls are cut low (with a dark cap) so the furniture shows;
+    // the walk always uses the real height.
+    cutaway = false,
     placing = null,
-    onPlace = null;
+    onPlace = null,
+    onSelect = null;
   const raycaster = new THREE.Raycaster();
   const mat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.82 });
   function box(w, h, d, x, y, z, material, rotation = 0, name = '') {
@@ -51,9 +57,15 @@ export function createViewer(container, onStatus) {
   }
   function rebuild(data) {
     model = data;
+    cutaway = !!data.cutaway;
     while (group.children.length) {
       const child = group.children[0];
       group.remove(child);
+      // Furniture groups share cached materials (furniture3d.mjs): free only their geometry.
+      if (child.isGroup) {
+        child.traverse((o) => o.geometry?.dispose());
+        continue;
+      }
       child.geometry?.dispose();
       if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose());
       else child.material?.dispose();
@@ -66,43 +78,53 @@ export function createViewer(container, onStatus) {
       features = data.features || [];
     const base = box(W, 0.13, D, 0, -0.09, 0, mat('#d9dfd7'), 0, 'Base');
     base.castShadow = false;
-    if (rooms.length) {
+    // Floors: one mesh per room, in its finish colour (interior design) or the project floor.
+    const finishes = data.finishes || [];
+    const insideRoom = (p, room) =>
+      room.runs.some((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
+    for (const room of rooms) {
       const positions = [];
-      for (const room of rooms)
-        for (const r of room.runs) {
-          const x = r.x * W - W / 2,
-            z = r.y * D - D / 2,
-            w = r.w * W,
-            d = r.h * D;
-          positions.push(
-            x,
-            0,
-            z,
-            x,
-            0,
-            z + d,
-            x + w,
-            0,
-            z + d,
-            x,
-            0,
-            z,
-            x + w,
-            0,
-            z + d,
-            x + w,
-            0,
-            z,
-          );
-        }
+      for (const r of room.runs) {
+        const x = r.x * W - W / 2,
+          z = r.y * D - D / 2,
+          w = r.w * W,
+          d = r.h * D;
+        positions.push(
+          x,
+          0,
+          z,
+          x,
+          0,
+          z + d,
+          x + w,
+          0,
+          z + d,
+          x,
+          0,
+          z,
+          x + w,
+          0,
+          z + d,
+          x + w,
+          0,
+          z,
+        );
+      }
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
       geo.computeVertexNormals();
-      const floor = new THREE.Mesh(geo, mat(floorColor));
+      const f = finishes.find((f) => insideRoom(f, room));
+      const floor = new THREE.Mesh(geo, mat(f?.floor || floorColor));
       floor.receiveShadow = true;
-      floor.name = 'Pisos interiores';
+      floor.name = 'Piso';
       group.add(floor);
     }
+    /** Wall colour seen from a point (normalised): the finish of the room it falls in. */
+    const wallSide = (px, pz) => {
+      const p = { x: px / W + 0.5, y: pz / D + 0.5 };
+      const room = rooms.find((r) => insideRoom(p, r));
+      return room ? finishes.find((f) => insideRoom(f, room))?.wall : null;
+    };
     if (image && imageFloor) {
       floorTexture = new THREE.Texture(image);
       floorTexture.colorSpace = THREE.SRGBColorSpace;
@@ -130,7 +152,7 @@ export function createViewer(container, onStatus) {
       const x = ((s.a.x + s.b.x - 1) * W) / 2,
         z = ((s.a.y + s.b.y - 1) * D) / 2,
         rot = -Math.atan2(dz, dx),
-        h = s.height || H,
+        h = cutaway && !walking ? Math.min(s.height || H, CUT) : s.height || H,
         t = s.thickness || T,
         m = mat(s.id === selected ? '#8bbda1' : material);
       if (s.type === 'wall') {
@@ -140,8 +162,30 @@ export function createViewer(container, onStatus) {
           uz = dz / L,
           cx = x + ((ext.b - ext.a) / 2) * ux,
           cz = z + ((ext.b - ext.a) / 2) * uz;
-        const wall = box(L + ext.a + ext.b, h, t, cx, h / 2, cz, m, rot, 'Pared ' + s.id);
+        // Each long face takes the paint of the room it looks into (BoxGeometry faces: 4 = +z, 5 = -z).
+        let faces = m;
+        if (finishes.length && s.id !== selected) {
+          const nx = Math.sin(rot),
+            nz = Math.cos(rot),
+            far = t / 2 + 0.25,
+            front = wallSide(x + nx * far, z + nz * far),
+            back = wallSide(x - nx * far, z - nz * far);
+          if (front || back) faces = [m, m, m, m, front ? mat(front) : m, back ? mat(back) : m];
+        }
+        const wall = box(L + ext.a + ext.b, h, t, cx, h / 2, cz, faces, rot, 'Pared ' + s.id);
         if (wall) wall.userData.wall = s.id;
+        if (cutaway && !walking)
+          box(
+            L + ext.a + ext.b,
+            0.025,
+            t + 0.004,
+            cx,
+            h + 0.0125,
+            cz,
+            mat('#1e2925'),
+            rot,
+            'Corte',
+          );
       } else {
         const sill = s.type === 'window' ? Math.min(s.sill ?? 0.9, h) : 0,
           opening = Math.min(s.openHeight || (s.type === 'window' ? 1.2 : 2.1), h - sill);
@@ -193,10 +237,30 @@ export function createViewer(container, onStatus) {
         }
       }
     }
+    // Interior design: furniture items (front = +y on the sheet = +z in 3D).
+    for (const it of data.items || []) {
+      const g = buildItem(it);
+      g.position.set((it.x - 0.5) * W, 0, (it.y - 0.5) * D);
+      g.rotation.y = (-(it.rot || 0) * Math.PI) / 180;
+      g.userData.item = it.id;
+      g.traverse((o) => {
+        if (o.isMesh) o.userData.item = it.id;
+      });
+      if (it.id === data.selectedItem)
+        g.traverse((o) => {
+          if (o.isMesh) {
+            o.material = o.material.clone();
+            o.material.emissive = new THREE.Color('#1d6b50');
+            o.material.emissiveIntensity = 0.35;
+          }
+        });
+      group.add(g);
+    }
     // Structure: columns (full height) and an optional roof/floor slab over the walls.
+    const Hc = cutaway && !walking ? Math.min(H, CUT) : H;
     for (const c of data.columns || [])
-      box(c.b, H, c.h, (c.x - 0.5) * W, H / 2, (c.y - 0.5) * D, mat('#b8bcb6'), 0, 'Columna');
-    if (data.slab?.show && walls.length) {
+      box(c.b, Hc, c.h, (c.x - 0.5) * W, Hc / 2, (c.y - 0.5) * D, mat('#b8bcb6'), 0, 'Columna');
+    if (data.slab?.show && walls.length && !(cutaway && !walking)) {
       let x0 = Infinity,
         x1 = -Infinity,
         z0 = Infinity,
@@ -433,7 +497,9 @@ export function createViewer(container, onStatus) {
       : 'Arrastra para girar · Rueda para acercarte';
   }
   function reset() {
+    const was = walking;
     walking = false;
+    if (was && cutaway && model) rebuild(model);
     $el('movement').hidden = true;
     $el('walktools').hidden = true;
     $el('crosshair').hidden = true;
@@ -453,7 +519,9 @@ export function createViewer(container, onStatus) {
   }
   function startAt(p) {
     position.set((p.x - 0.5) * model.W, 1.65, (p.y - 0.5) * model.D);
+    const was = walking;
     walking = true;
+    if (!was && cutaway) rebuild(model);
     lookPitch = 0;
     $el('movement').hidden = false;
     $el('walktools').hidden = false;
@@ -494,10 +562,11 @@ export function createViewer(container, onStatus) {
     if (!model) return null;
     raycaster.setFromCamera(ndc, camera);
     raycaster.far = maxDistance;
-    const hit = raycaster.intersectObjects(group.children, false)[0];
+    const hit = raycaster.intersectObjects(group.children, true)[0];
     raycaster.far = Infinity;
     if (!hit) return null;
     return {
+      item: hit.object.userData.item ?? null,
       id: hit.object.userData.wall ?? null,
       point: { x: hit.point.x / model.W + 0.5, y: hit.point.z / model.D + 0.5 },
     };
@@ -537,7 +606,17 @@ export function createViewer(container, onStatus) {
   });
   renderer.domElement.addEventListener('click', (e) => {
     const moved = pressed && Math.hypot(e.clientX - pressed.x, e.clientY - pressed.y) > 5;
-    if (!placing || walking || moved) return;
+    if (walking || moved) return;
+    if (!placing) {
+      if (!onSelect) return;
+      const r0 = renderer.domElement.getBoundingClientRect();
+      const t = pick({
+        x: ((e.clientX - r0.left) / r0.width) * 2 - 1,
+        y: -((e.clientY - r0.top) / r0.height) * 2 + 1,
+      });
+      onSelect(t?.item || null);
+      return;
+    }
     const r = renderer.domElement.getBoundingClientRect();
     place(
       placing,
@@ -637,9 +716,16 @@ export function createViewer(container, onStatus) {
     placeAhead,
     setPlacing,
     setGhost,
+    setCutaway: (on) => {
+      cutaway = !!on;
+      if (model) rebuild(model);
+    },
+    isCutaway: () => cutaway,
     isWalking: () => walking,
     /** fn(type, wallId, point) → true when the opening was added. */
     setOnPlace: (fn) => (onPlace = fn),
+    /** fn(itemId | null) when a piece of furniture is clicked in the orbit view. */
+    setOnSelect: (fn) => (onSelect = fn),
     top: () => {
       reset();
       pitch = 1.56;

@@ -14,6 +14,11 @@ export const EVENTS = [
   'video',
   'guia',
   'guia_saltada',
+  'ia_fotos',
+  'ia_describir',
+  'ia_cambiar',
+  'ia_foto',
+  'compartir',
 ];
 const BOTS =
   /bot|crawl|spider|slurp|preview|headless|lighthouse|facebookexternalhit|whatsapp|telegram|curl|wget|python|node-fetch/i;
