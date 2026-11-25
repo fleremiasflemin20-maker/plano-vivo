@@ -15,3 +15,7 @@ work-update.py
 
 # Marketing material (local only: large media files)
 marketing/
+
+# Wrangler local secrets and state
+.dev.vars
+.wrangler/
