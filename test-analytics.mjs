@@ -72,6 +72,7 @@ export async function runAnalyticsTests() {
   assert.equal(browser(PC), 'Edge');
   assert.ok(isBot('Googlebot/2.1') && isBot('') && !isBot(PHONE));
   assert.equal(parseEvent({ e: 'hackear' }), null);
+  assert.equal(parseEvent({ e: 'guia_saltada' }).event, 'guia_saltada');
   assert.deepEqual(
     parseEvent({
       e: 'visita',

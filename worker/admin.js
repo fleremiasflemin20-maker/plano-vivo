@@ -84,7 +84,7 @@ export const ADMIN_HTML = String.raw`<!doctype html>
   var $ = function (id) { return document.getElementById(id); };
   var nf = new Intl.NumberFormat('es-EC');
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
-  var LABELS = { visita: 'Visitaron la web', subir: 'Subieron un plano', dibujar: 'Dibujaron', construir: 'Construyeron en 3D', recorrido: 'Hicieron el recorrido', pro: 'Abrieron herramientas pro', exportar: 'Exportaron', sugerencia: 'Enviaron una sugerencia', video: 'Vieron el video' };
+  var LABELS = { visita: 'Visitaron la web', subir: 'Subieron un plano', dibujar: 'Dibujaron', construir: 'Construyeron en 3D', recorrido: 'Hicieron el recorrido', pro: 'Abrieron herramientas pro', exportar: 'Exportaron', sugerencia: 'Enviaron una sugerencia', video: 'Vieron el video', guia: 'Terminaron la guía', guia_saltada: 'Saltaron la guía' };
   var COUNTRY = { EC: 'Ecuador', CO: 'Colombia', PE: 'Perú', MX: 'México', US: 'Estados Unidos', ES: 'España', AR: 'Argentina', CL: 'Chile', VE: 'Venezuela', BO: 'Bolivia' };
 
   function show(logged) { $('login').hidden = logged; $('app').hidden = !logged; }
@@ -125,7 +125,7 @@ export const ADMIN_HTML = String.raw`<!doctype html>
     columns($('chart'), s);
     $('dayTable').innerHTML = '<table><thead><tr><th>Día</th><th class="n">Visitantes</th><th class="n">Páginas</th><th class="n">Primera vez</th></tr></thead><tbody>' +
       s.slice().reverse().map(function (d) { return '<tr><td>' + d.dia + '</td><td class="n">' + d.visitantes + '</td><td class="n">' + d.visitas + '</td><td class="n">' + d.nuevos + '</td></tr>'; }).join('') + '</tbody></table>';
-    var steps = ['visita', 'subir', 'dibujar', 'construir', 'recorrido', 'pro', 'exportar', 'video', 'sugerencia'];
+    var steps = ['visita', 'guia', 'guia_saltada', 'subir', 'dibujar', 'construir', 'recorrido', 'pro', 'exportar', 'video', 'sugerencia'];
     bars($('funnel'), steps.map(function (k) { return { nombre: LABELS[k], visitantes: ev(k).personas }; }), people, true);
     bars($('sources'), data.origenes);
     bars($('campaigns'), data.campanas);

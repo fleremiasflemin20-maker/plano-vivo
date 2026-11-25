@@ -152,12 +152,17 @@ export function clearProject() {
   state.start = null;
 }
 
-// Example house, in normalised sheet coordinates [x1, y1, x2, y2].
+// Example house, in normalised sheet coordinates [x1, y1, x2, y2]. Each room has a door
+// and a 1.2 m window, so the technical review starts clean.
 const DEMO_WALLS = [
-  [0.08, 0.12, 0.92, 0.12],
+  [0.08, 0.12, 0.2, 0.12],
+  [0.3, 0.12, 0.64, 0.12],
+  [0.76, 0.12, 0.92, 0.12],
   [0.92, 0.12, 0.92, 0.88],
-  [0.92, 0.88, 0.58, 0.88],
-  [0.48, 0.88, 0.08, 0.88],
+  [0.92, 0.88, 0.84, 0.88],
+  [0.74, 0.88, 0.58, 0.88],
+  [0.48, 0.88, 0.3, 0.88],
+  [0.2, 0.88, 0.08, 0.88],
   [0.08, 0.88, 0.08, 0.12],
   [0.48, 0.12, 0.48, 0.44],
   [0.48, 0.55, 0.48, 0.88],
@@ -172,6 +177,12 @@ const DEMO_DOORS = [
   [0.66, 0.5, 0.75, 0.5],
   [0.48, 0.88, 0.58, 0.88],
 ];
+const DEMO_WINDOWS = [
+  [0.2, 0.12, 0.3, 0.12],
+  [0.64, 0.12, 0.76, 0.12],
+  [0.84, 0.88, 0.74, 0.88],
+  [0.3, 0.88, 0.2, 0.88],
+];
 
 export function demo() {
   clearProject();
@@ -181,6 +192,7 @@ export function demo() {
   $('thickness').value = 0.18;
   for (const a of DEMO_WALLS) addWall({ x: a[0], y: a[1] }, { x: a[2], y: a[3] });
   for (const a of DEMO_DOORS) addWall({ x: a[0], y: a[1] }, { x: a[2], y: a[3] }, 'door');
+  for (const a of DEMO_WINDOWS) addWall({ x: a[0], y: a[1] }, { x: a[2], y: a[3] }, 'window');
   $('filename').textContent = 'Vivienda de ejemplo · 12 × 9 m';
   $('projectName').value = 'Vivienda de ejemplo';
   resetPlan();

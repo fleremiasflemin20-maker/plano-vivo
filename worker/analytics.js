@@ -12,6 +12,8 @@ export const EVENTS = [
   'exportar',
   'sugerencia',
   'video',
+  'guia',
+  'guia_saltada',
 ];
 const BOTS =
   /bot|crawl|spider|slurp|preview|headless|lighthouse|facebookexternalhit|whatsapp|telegram|curl|wget|python|node-fetch/i;

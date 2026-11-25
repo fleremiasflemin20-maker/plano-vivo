@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS visitas (
   dia TEXT NOT NULL,          -- YYYY-MM-DD, hora de Ecuador (UTC-5)
   hora INTEGER NOT NULL,      -- 0..23, hora de Ecuador
   visitante TEXT NOT NULL,    -- hash diario anónimo
-  evento TEXT NOT NULL,       -- visita, subir, construir, dibujar, recorrido, pro, exportar, sugerencia, video
+  evento TEXT NOT NULL,       -- visita, subir, construir, dibujar, recorrido, pro, exportar, sugerencia, video, guia, guia_saltada
   nuevo INTEGER NOT NULL DEFAULT 0, -- 1 = primera visita desde ese navegador
   sitio TEXT,                 -- cloudflare | github
   origen TEXT,                -- dominio de donde llegó (o "directo")
