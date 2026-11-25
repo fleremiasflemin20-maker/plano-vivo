@@ -34,6 +34,7 @@ import './ui/files.mjs';
 import './ui/feedback.mjs';
 import './ui/pro.mjs';
 import './ui/stats.mjs';
+import './ui/guide.mjs';
 
 $('pythonPanel').hidden = !localEngine;
 $('exportIFC').hidden = !localEngine;
