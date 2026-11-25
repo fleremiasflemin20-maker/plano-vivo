@@ -5,6 +5,8 @@
 // rate limiters and inside a daily one-way hash (see analytics.js).
 import { recordEvent, summary, sameToken } from './analytics.js';
 import { ADMIN_HTML } from './admin.js';
+import { ROUTES as AI_ROUTES } from './ai.js';
+import { createShare, readShare, MAX_SHARE } from './share.js';
 
 const SITES = [
   'https://plano-vivo.fleremiasflemin.workers.dev',
@@ -85,6 +87,78 @@ async function handleAdmin(request, env, url) {
   return json(await summary(env, Number(url.searchParams.get('dias')) || 30), 200, noStore);
 }
 
+const MAX_AI_BODY = 6_000_000;
+async function handleAI(request, env, cors, allowed, name) {
+  if (request.method !== 'POST') return json({ error: 'Método no permitido.' }, 405, cors);
+  if (!allowed) return json({ error: 'Origen no permitido.' }, 403, cors);
+  if (!env.AI) return json({ error: 'La IA no está disponible en este momento.' }, 503, cors);
+  if (Number(request.headers.get('Content-Length') || 0) > MAX_AI_BODY)
+    return json({ error: 'Las fotos pesan demasiado: usa menos o más pequeñas.' }, 413, cors);
+  if (env.AI_LIMIT) {
+    const { success } = await env.AI_LIMIT.limit({ key: ip(request) });
+    if (!success)
+      return json({ error: 'Muchas peticiones seguidas. Espera un minuto.' }, 429, cors);
+  }
+  let body;
+  try {
+    const raw = await request.text();
+    if (raw.length > MAX_AI_BODY) return json({ error: 'Las fotos pesan demasiado.' }, 413, cors);
+    body = JSON.parse(raw);
+  } catch {
+    return json({ error: 'Petición no válida.' }, 400, cors);
+  }
+  try {
+    const out = await AI_ROUTES[name](env, body);
+    return json(out, out.error ? 422 : 200, { ...cors, 'Cache-Control': 'no-store' });
+  } catch (e) {
+    console.error('IA', name, e?.message || e);
+    const quota = /4006|quota|neurons|limit/i.test(String(e?.message));
+    return json(
+      {
+        error: quota
+          ? 'Se agotó el uso de IA de hoy. Vuelve a intentarlo mañana.'
+          : 'La IA no respondió. Inténtalo de nuevo.',
+      },
+      503,
+      cors,
+    );
+  }
+}
+
+async function handleShare(request, env, cors, allowed, url) {
+  const id = url.pathname.slice('/api/compartir/'.length);
+  // Reading a shared link is public (whoever has the link); creating one needs our origin.
+  if (!allowed && !(request.method === 'GET' && id))
+    return json({ error: 'Origen no permitido.' }, 403, cors);
+  if (request.method === 'GET' && id) {
+    const datos = await readShare(env, id);
+    if (!datos) return json({ error: 'Este enlace no existe o fue eliminado.' }, 404, cors);
+    return new Response(datos, {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'public, max-age=300',
+        ...cors,
+      },
+    });
+  }
+  if (request.method !== 'POST' || id) return json({ error: 'Método no permitido.' }, 405, cors);
+  if (Number(request.headers.get('Content-Length') || 0) > MAX_SHARE + 1000)
+    return json({ error: 'El proyecto es demasiado grande para compartir.' }, 413, cors);
+  if (env.LIMITER) {
+    const { success } = await env.LIMITER.limit({ key: 'share:' + ip(request) });
+    if (!success)
+      return json({ error: 'Demasiados enlaces seguidos. Espera un minuto.' }, 429, cors);
+  }
+  let body;
+  try {
+    body = JSON.parse(await request.text());
+  } catch {
+    return json({ error: 'Petición no válida.' }, 400, cors);
+  }
+  const out = await createShare(env, body);
+  return json(out, out.error ? 422 : 201, cors);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -102,7 +176,14 @@ export default {
       if (request.method !== 'GET') return json({ error: 'Método no permitido.' }, 405);
       return handleAdmin(request, env, url);
     }
-    if (url.pathname !== '/api/sugerencias' && url.pathname !== '/api/evento')
+    const aiName = url.pathname.startsWith('/api/ia/') ? url.pathname.slice(8) : null;
+    const share = url.pathname === '/api/compartir' || url.pathname.startsWith('/api/compartir/');
+    if (
+      url.pathname !== '/api/sugerencias' &&
+      url.pathname !== '/api/evento' &&
+      !(aiName && AI_ROUTES[aiName]) &&
+      !share
+    )
       return env.ASSETS.fetch(request);
 
     const origin = request.headers.get('Origin') || '',
@@ -110,7 +191,7 @@ export default {
       cors = allowed
         ? {
             'Access-Control-Allow-Origin': origin,
-            'Access-Control-Allow-Methods': 'POST',
+            'Access-Control-Allow-Methods': 'GET, POST',
             'Access-Control-Allow-Headers': 'Content-Type',
             Vary: 'Origin',
           }
@@ -118,6 +199,8 @@ export default {
     if (request.method === 'OPTIONS')
       return new Response(null, { status: allowed ? 204 : 403, headers: cors });
     if (url.pathname === '/api/evento') return handleEvent(request, env, cors, allowed);
+    if (aiName) return handleAI(request, env, cors, allowed, aiName);
+    if (share) return handleShare(request, env, cors, allowed, url);
     if (request.method !== 'POST') return json({ error: 'Método no permitido.' }, 405, cors);
     if (!allowed) return json({ error: 'Origen no permitido.' }, 403, cors);
     if (Number(request.headers.get('Content-Length') || 0) > MAX_BODY)

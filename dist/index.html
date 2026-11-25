@@ -45,8 +45,10 @@
         /><span id="saveState">Guardado local</span>
       </div>
       <button id="feedback" class="feedback">Sugerencias</button
-      ><button id="new">Nuevo plano</button><button id="save">Guardar proyecto</button
-      ><button id="load">Abrir</button><input hidden id="json" type="file" accept=".json" />
+      ><button id="new">Nuevo plano</button
+      ><button id="share" title="Crea un enlace para ver este proyecto">Compartir</button
+      ><button id="save">Guardar proyecto</button><button id="load">Abrir</button
+      ><input hidden id="json" type="file" accept=".json" />
     </header>
     <main>
       <aside>
@@ -281,6 +283,97 @@
           >
         </details>
         <button id="walk" class="wide">Iniciar recorrido</button>
+        <details id="interiorPanel">
+          <summary>Diseño de interiores</summary>
+          <h3 class="pro-h">Crear con IA</h3>
+          <div class="pro-row">
+            <button
+              id="aiPhotos"
+              class="primary"
+              title="Sube fotos de cada cuarto o un video recorriendo la casa"
+            >
+              Desde fotos o video</button
+            ><button id="aiDescribe" title="Describe la casa y la creamos en 3D">
+              Describir mi casa
+            </button>
+          </div>
+          <input
+            id="aiFiles"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,video/*"
+            multiple
+            hidden
+          />
+          <p class="hint">
+            Una foto por cuarto funciona bien; con el plano subido, las medidas son reales.
+          </p>
+          <p class="hint">
+            Amuebla, cambia estilos, pisos y pintura. En 3D, haz clic en un mueble para editarlo; en
+            el plano, arrástralo con Seleccionar.
+          </p>
+          <h3 class="pro-h">Estilo</h3>
+          <div class="chip-row" id="styleChips"></div>
+          <div class="pro-row">
+            <button id="furnishAll" class="primary">Amueblar todo</button
+            ><button id="emptyAll">Vaciar</button>
+          </div>
+          <div class="pro-row">
+            <button id="itemListBtn">Lista de muebles</button
+            ><label class="check"
+              ><input type="checkbox" id="cutaway" checked /> Muros bajos en 3D</label
+            >
+          </div>
+          <h3 class="pro-h">Ambiente</h3>
+          <label>Ambiente<select id="intRoom" class="field"></select></label>
+          <div class="fields">
+            <label>Piso<select id="intFloor" class="field"></select></label
+            ><label>Pared<select id="intWall" class="field"></select></label>
+          </div>
+          <div class="pro-row">
+            <button id="furnishRoom">Amueblar ambiente</button
+            ><button id="emptyRoom" class="text">Vaciar ambiente</button>
+          </div>
+          <h3 class="pro-h">Agregar mueble</h3>
+          <div id="catalog" class="catalog"></div>
+          <div id="itemEditor" hidden>
+            <h3 class="pro-h" id="itemName">Mueble</h3>
+            <div class="fields">
+              <label
+                >Ancho (m)<input
+                  id="itemW"
+                  class="field"
+                  type="number"
+                  min="0.1"
+                  max="8"
+                  step="0.05" /></label
+              ><label
+                >Fondo (m)<input
+                  id="itemD"
+                  class="field"
+                  type="number"
+                  min="0.1"
+                  max="8"
+                  step="0.05"
+              /></label>
+            </div>
+            <div class="fields">
+              <label
+                >Alto (m)<input
+                  id="itemH"
+                  class="field"
+                  type="number"
+                  min="0.01"
+                  max="4"
+                  step="0.05" /></label
+              ><label>Color<input id="itemColor" class="field" type="color" /></label>
+            </div>
+            <div class="pro-row">
+              <button id="itemRotate" title="Girar 90° (R)">Girar 90°</button
+              ><button id="itemCopy">Duplicar</button
+              ><button id="itemDelete" class="text">Borrar</button>
+            </div>
+          </div>
+        </details>
         <details id="proPanel">
           <summary>Herramientas profesionales</summary>
           <p class="hint">
@@ -464,9 +557,29 @@
                 title="Clic en una pared del modelo para añadir una ventana"
               >
                 + Ventana</button
+              ><button id="aiRender" title="Foto realista de esta vista con IA">
+                Foto realista</button
               ><button id="resetcam">Centrar</button><button id="topcam">Desde arriba</button>
             </div>
             <div id="crosshair" hidden aria-hidden="true"></div>
+            <form id="aiBar" autocomplete="off">
+              <div id="aiSuggest">
+                <button type="button">Estilo mid-century</button
+                ><button type="button">Paredes verde oscuro</button
+                ><button type="button">Reacomoda los muebles</button
+                ><button type="button">Agrega una planta y una lámpara</button>
+              </div>
+              <div class="ai-input">
+                <select id="aiRoom" aria-label="Ambiente a cambiar"></select
+                ><input
+                  id="aiText"
+                  placeholder="Cambia toda la casa…"
+                  maxlength="300"
+                  aria-label="Qué quieres cambiar"
+                /><button type="button" id="aiMic" title="Dictar" aria-label="Dictar">🎤</button
+                ><button id="aiSend" class="primary" aria-label="Aplicar">→</button>
+              </div>
+            </form>
             <div class="compass">N<br />◇</div>
             <div class="pane-bottom" id="modelhelp">Arrastra para girar · Rueda para acercarte</div>
             <div id="movement" hidden>
@@ -534,6 +647,67 @@
           Cancelar</button
         ><button value="ok" class="primary">Aplicar</button>
       </form>
+    </dialog>
+    <dialog id="shareDialog">
+      <h2>Compartir proyecto</h2>
+      <p class="hint" id="shareInfo">
+        Creamos un enlace con una copia de este proyecto (sin la imagen del plano). Quien lo abra
+        puede verlo y editar su propia copia.
+      </p>
+      <input id="shareLink" class="field" readonly />
+      <div class="pro-row">
+        <button id="shareCreate" class="primary">Crear enlace</button
+        ><button id="shareCopy" hidden>Copiar enlace</button
+        ><button id="shareClose" class="text">Cerrar</button>
+      </div>
+    </dialog>
+    <dialog id="aiConsent">
+      <form method="dialog">
+        <h2>Usar la IA de Plano Vivo</h2>
+        <p>
+          Para leer tus fotos, crear la casa o aplicar cambios, enviamos tus fotos o tu texto al
+          servicio de IA de Cloudflare. <strong>No guardamos tus fotos</strong> ni las usamos para
+          nada más. El resto del proyecto sigue en tu equipo.
+        </p>
+        <button value="cancel">Ahora no</button
+        ><button value="ok" class="primary">Aceptar y continuar</button>
+      </form>
+    </dialog>
+    <dialog id="aiProgress" class="ai-progress">
+      <h2 id="aiTitle">Leyendo tus fotos</h2>
+      <ol class="ai-steps">
+        <li id="aiStep1"></li>
+        <li id="aiStep2"></li>
+        <li id="aiStep3"></li>
+      </ol>
+      <div id="aiThumbs"></div>
+      <p id="aiError" class="ai-error" role="status"></p>
+      <button id="aiCancel" class="text">Cerrar</button>
+    </dialog>
+    <dialog id="aiDescribeDialog">
+      <form method="dialog">
+        <h2>Describe tu casa</h2>
+        <p class="hint">
+          Por ejemplo: «Casa de 3 dormitorios y 2 baños de 120 m², estilo nórdico» o «estudio de 40
+          m² vacío».
+        </p>
+        <textarea id="aiDescribeText" rows="3" maxlength="600" class="field"></textarea>
+        <button value="cancel" formnovalidate>Cancelar</button
+        ><button value="ok" class="primary">Crear en 3D</button>
+      </form>
+    </dialog>
+    <dialog id="renderDialog" class="render-dialog">
+      <h2>Foto realista</h2>
+      <div class="render-compare">
+        <img id="renderBefore" alt="Vista 3D" />
+        <div id="renderAfterWrap"><img id="renderAfter" alt="Foto realista generada" /></div>
+      </div>
+      <input id="renderSlider" type="range" min="0" max="100" value="50" aria-label="Comparar" />
+      <p id="renderStatus" class="hint"></p>
+      <div class="pro-row">
+        <a id="renderDownload" download="plano-vivo-foto.jpg" class="button" hidden>Descargar</a
+        ><button id="renderClose" class="primary">Cerrar</button>
+      </div>
     </dialog>
     <dialog id="roomDialog">
       <form method="dialog">

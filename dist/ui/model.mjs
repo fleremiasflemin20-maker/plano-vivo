@@ -1,6 +1,7 @@
 // Recomputes rooms/quantities, refreshes the 3D model and restores saved projects.
 import { quantities, findRooms, validateProject } from '../geometry.mjs';
 import { validatePro, roomTitle } from '../pro.mjs';
+import { validateInterior } from '../interior.mjs';
 import {
   $,
   W,
@@ -47,6 +48,10 @@ export function renderModel() {
     selected: state.selected,
     columns: state.columns,
     slab: state.slab,
+    items: state.items,
+    finishes: state.finishes,
+    selectedItem: state.selectedItem,
+    cutaway: state.cutaway && state.items.length > 0,
   });
 }
 
@@ -97,6 +102,7 @@ export function rebuild(save = true) {
 export async function restore(data, save = true) {
   validateProject(data);
   validatePro(data);
+  validateInterior(data);
   state.sourceFile = null;
   state.analysis = data.analysis || null;
   let img = state.bg;
@@ -116,6 +122,10 @@ export async function restore(data, save = true) {
   state.columns = structuredClone(data.columns || []);
   state.slab = data.slab ? { ...data.slab } : { thickness: 0.2, show: false };
   state.flash = null;
+  state.items = structuredClone(data.items || []).map((it) => ({ ...it, id: it.id || uid() }));
+  state.finishes = structuredClone(data.finishes || []);
+  state.interiorStyle = typeof data.interiorStyle === 'string' ? data.interiorStyle : 'calido';
+  state.selectedItem = null;
   state.scaleAssumed = false;
   $('width').value = data.width;
   $('depth').value = (data.width * data.ratio).toFixed(5);
@@ -144,6 +154,9 @@ export function clearProject() {
   state.grid = null;
   state.columns = [];
   state.flash = null;
+  state.items = [];
+  state.finishes = [];
+  state.selectedItem = null;
   state.bg = null;
   state.sourceFile = null;
   state.analysis = null;
