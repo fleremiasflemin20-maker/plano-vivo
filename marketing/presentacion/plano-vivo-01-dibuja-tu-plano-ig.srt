@@ -1,0 +1,27 @@
+1
+00:00:00,250 --> 00:00:03,682
+Dibuja tu plano y míralo en 3D mientras lo trazas.
+
+2
+00:00:04,135 --> 00:00:08,359
+Traza un recinto con dos clics: las cuatro paredes salen a escuadra.
+
+3
+00:00:08,812 --> 00:00:14,524
+Divide los espacios con muros interiores. El modelo 3D se actualiza al instante.
+
+4
+00:00:14,980 --> 00:00:18,220
+Coloca puertas y ventanas con un clic sobre el muro.
+
+5
+00:00:21,725 --> 00:00:26,213
+Mide cualquier distancia y obtén el área de cada recinto en metros cuadrados.
+
+6
+00:00:26,664 --> 00:00:32,208
+Gira el modelo y expórtalo: DXF para tu programa de CAD, o GLB para 3D.
+
+7
+00:00:32,662 --> 00:00:37,198
+Pruébalo gratis en tu navegador. El enlace está en el perfil.

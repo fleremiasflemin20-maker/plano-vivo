@@ -1,0 +1,35 @@
+1
+00:00:00,250 --> 00:00:06,034
+Plano Vivo ahora trae herramientas profesionales para arquitectos, ingenieros civiles y diseñadores.
+
+2
+00:00:06,485 --> 00:00:11,597
+Traza los ejes del proyecto con sus luces: números en un sentido y letras en el otro.
+
+3
+00:00:12,055 --> 00:00:16,399
+Coloca columnas en los cruces de ejes y una losa, y míralas en 3D.
+
+4
+00:00:17,544 --> 00:00:23,544
+Nombra cada ambiente: sala, dormitorio, baño. El área se calcula sola.
+
+5
+00:00:25,542 --> 00:00:29,622
+Al dibujar un muro, escribe la longitud exacta y pulsa Intro.
+
+6
+00:00:30,077 --> 00:00:36,629
+La revisión técnica avisa lo que falta: ventanas, accesos, puertas angostas o escaleras incómodas.
+
+7
+00:00:37,087 --> 00:00:43,375
+Y obtén los cómputos: bloques, mortero, enlucido, hormigón y acero, listos para exportar.
+
+8
+00:00:43,828 --> 00:00:49,804
+Con cuadro de áreas por ambiente, y todo exportable a DXF con ejes, columnas y ambientes.
+
+9
+00:00:50,268 --> 00:00:55,716
+Ya disponible, gratis, en tu navegador. El enlace está en el perfil.

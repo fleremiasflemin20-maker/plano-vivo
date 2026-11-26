@@ -13,8 +13,11 @@ work-update.py
 .DS_Store
 
 
-# Marketing material (local only: large media files)
-marketing/
+# Marketing: raw recordings and work files stay local
+marketing/fuentes/*-tmp/
+marketing/fuentes/node_modules/
+# Internet plan used in video 6: license not confirmed, not redistributed here
+marketing/fuentes/plano-internet.webp
 
 # Wrangler local secrets and state
 .dev.vars

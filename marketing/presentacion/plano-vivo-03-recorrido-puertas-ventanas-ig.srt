@@ -1,0 +1,27 @@
+1
+00:00:00,250 --> 00:00:04,306
+Recorre tu proyecto por dentro, como si ya estuviera construido.
+
+2
+00:00:04,757 --> 00:00:08,189
+Inicia el recorrido y camina a la altura de los ojos.
+
+3
+00:00:10,893 --> 00:00:14,805
+Apunta a una pared y pulsa V: aparece una ventana.
+
+4
+00:00:15,255 --> 00:00:19,359
+Pulsa P para abrir una puerta, y pasa por ella al siguiente espacio.
+
+5
+00:00:21,339 --> 00:00:25,899
+Salta a cualquier recinto con un clic, o atraviesa paredes si lo necesitas.
+
+6
+00:00:26,357 --> 00:00:30,917
+Desde la vista 3D, un clic sobre el muro añade la puerta o la ventana.
+
+7
+00:00:32,656 --> 00:00:37,456
+Gratis, sin instalar nada. El enlace está en el perfil.

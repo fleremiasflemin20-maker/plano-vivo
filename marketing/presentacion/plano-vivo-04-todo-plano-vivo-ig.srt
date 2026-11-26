@@ -1,0 +1,39 @@
+1
+00:00:00,250 --> 00:00:06,346
+Te presento Plano Vivo: del plano a un modelo 3D amueblado con inteligencia artificial, en tu navegador.
+
+2
+00:00:06,800 --> 00:00:09,752
+Sube la imagen o el PDF de un plano.
+
+3
+00:00:10,209 --> 00:00:15,681
+Con un clic reconoce muros con su grosor, puertas, ventanas, escaleras y muebles.
+
+4
+00:00:18,021 --> 00:00:23,301
+Corrige en 2D, mide, y obtén áreas, volúmenes y el área de cada recinto.
+
+5
+00:00:23,753 --> 00:00:29,249
+Amuébla la casa con un clic, según las medidas reales de cada ambiente, y elige el estilo.
+
+6
+00:00:33,184 --> 00:00:38,224
+Pídele cambios escribiendo o hablando: paredes verde oscuro y un sofá naranja.
+
+7
+00:00:40,866 --> 00:00:44,370
+Y convierte la vista en una foto realista para tu cliente.
+
+8
+00:00:48,954 --> 00:00:53,058
+Recórrelo por dentro, y añade puertas o ventanas donde apuntas.
+
+9
+00:00:56,756 --> 00:01:04,796
+Ejes, columnas, cómputos y revisión técnica, y exporta a DXF, GLB, CSV o comparte un enlace.
+
+10
+00:01:05,252 --> 00:01:10,916
+Está en beta y queremos tu opinión: usa el botón Sugerencias. Pruébalo gratis.

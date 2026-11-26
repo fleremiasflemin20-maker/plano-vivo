@@ -1,0 +1,19 @@
+1
+00:00:00,250 --> 00:00:04,810
+¿Tienes el plano de tu casa? Míralo en 3D en segundos.
+
+2
+00:00:05,266 --> 00:00:09,778
+Súbelo a Plano Vivo: una foto, una captura o un PDF.
+
+3
+00:00:10,238 --> 00:00:16,214
+Pulsa Construir en 3D: reconoce muros, puertas, ventanas, escaleras y muebles.
+
+4
+00:00:16,664 --> 00:00:20,480
+Y toma la escala del propio plano, con medidas reales.
+
+5
+00:00:20,934 --> 00:00:25,566
+Pruébalo gratis en tu navegador. El enlace está en el perfil.

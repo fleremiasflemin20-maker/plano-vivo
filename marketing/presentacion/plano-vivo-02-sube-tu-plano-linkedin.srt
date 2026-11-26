@@ -1,0 +1,23 @@
+1
+00:00:00,250 --> 00:00:04,690
+Sube la imagen o el PDF de un plano y conviértelo en un modelo 3D.
+
+2
+00:00:05,143 --> 00:00:09,463
+Sirve una foto, una captura de pantalla o un PDF del plano.
+
+3
+00:00:09,925 --> 00:00:16,357
+Pulsa Construir en 3D: reconoce muros con su grosor, puertas, ventanas, escaleras y muebles.
+
+4
+00:00:16,808 --> 00:00:20,792
+Lee la escala del propio plano, así las medidas son reales.
+
+5
+00:00:22,073 --> 00:00:25,025
+Y funciona con planos reales de arquitectura.
+
+6
+00:00:32,411 --> 00:00:36,323
+Pruébalo gratis. El enlace está en el perfil.

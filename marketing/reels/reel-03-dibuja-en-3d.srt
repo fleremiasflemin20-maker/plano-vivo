@@ -1,0 +1,19 @@
+1
+00:00:00,250 --> 00:00:03,394
+Dibuja tu casa y mírala en 3D al instante.
+
+2
+00:00:03,849 --> 00:00:06,465
+Un recinto, con dos clics.
+
+3
+00:00:06,916 --> 00:00:12,796
+Agrega paredes, puertas y ventanas. El 3D se actualiza mientras dibujas.
+
+4
+00:00:13,253 --> 00:00:16,685
+Mide distancias y obtén el área de cada habitación.
+
+5
+00:00:17,142 --> 00:00:21,126
+Pruébalo gratis. El enlace está en el perfil.
