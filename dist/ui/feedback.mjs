@@ -2,7 +2,7 @@
 // Stored by the Cloudflare Worker (worker/index.js) in D1. Also the presentation video.
 import { $ } from './core.mjs';
 
-const HOSTED = 'https://plano-vivo.fleremiasflemin.workers.dev';
+const HOSTED = 'https://plantea-3d.fleremiasflemin.workers.dev';
 // Same origin on Cloudflare; GitHub Pages and the local Python engine post there.
 const ENDPOINT = (location.origin === HOSTED ? '' : HOSTED) + '/api/sugerencias';
 export const VERSION = '2026-11';
@@ -46,7 +46,7 @@ form.onsubmit = async (e) => {
   }
 };
 
-// Presentation video: what Plano Vivo does, feature by feature.
+// Presentation video: what Plantea 3D does, feature by feature.
 $('tour').onclick = () => {
   $('tourDialog').showModal();
   $('tourVideo')

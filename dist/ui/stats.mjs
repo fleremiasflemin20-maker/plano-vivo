@@ -4,7 +4,7 @@
 // Respects "Do Not Track" and sends nothing from the local Python engine or localhost.
 import { $ } from './core.mjs';
 
-const HOSTED = 'https://plano-vivo.fleremiasflemin.workers.dev';
+const HOSTED = 'https://plantea-3d.fleremiasflemin.workers.dev';
 const ENDPOINT = (location.origin === HOSTED ? '' : HOSTED) + '/api/evento';
 const OFF =
   navigator.doNotTrack === '1' ||

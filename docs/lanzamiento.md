@@ -1,9 +1,9 @@
-# Lanzamiento de Plano Vivo (beta)
+# Lanzamiento de Plantea 3D (beta)
 
 ## Ya está listo
 
-- **Web pública:** https://plano-vivo.fleremiasflemin.workers.dev (Cloudflare). La copia en GitHub Pages sigue funcionando.
-- **Video de presentación** (2 min 54 s, con música): botón «▶ Ver cómo funciona» dentro de la app, o el archivo `dist/media/plano-vivo-presentacion.mp4`, con subtítulos en `dist/media/plano-vivo-presentacion.vtt`.
+- **Web pública:** https://plantea-3d.fleremiasflemin.workers.dev (Cloudflare). La copia en GitHub Pages sigue funcionando.
+- **Video de presentación** (2 min 54 s, con música): botón «▶ Ver cómo funciona» dentro de la app, o el archivo `dist/media/plantea-3d-presentacion.mp4`, con subtítulos en `dist/media/plantea-3d-presentacion.vtt`.
 - **Buzón de sugerencias:** botón «Sugerencias» arriba a la derecha. No pide cuenta. Los mensajes se guardan en la base de datos D1 `plano-vivo-sugerencias` de Cloudflare.
 
 Para leer las sugerencias:
@@ -45,15 +45,15 @@ Más adelante, cuando el reconocimiento esté probado con planos reales de usuar
 
 **WhatsApp:**
 
-> ¡Hola! Estamos probando Plano Vivo, una web gratuita que convierte un plano (foto o PDF) en un modelo 3D que puedes recorrer. ¿Me ayudas probándolo con un plano tuyo y contándome qué tal? Hay un botón «Sugerencias» dentro, sin registrarte: https://plano-vivo.fleremiasflemin.workers.dev
+> ¡Hola! Estamos probando Plantea 3D, una web gratuita que convierte un plano (foto o PDF) en un modelo 3D que puedes recorrer. ¿Me ayudas probándolo con un plano tuyo y contándome qué tal? Hay un botón «Sugerencias» dentro, sin registrarte: https://plantea-3d.fleremiasflemin.workers.dev
 
 **Facebook / LinkedIn:**
 
-> Construimos Plano Vivo: subes la foto o el PDF de un plano y en segundos tienes un modelo 3D con muros, puertas, ventanas, escaleras y muebles, que puedes medir, editar, recorrer por dentro y exportar a DXF o GLB. Funciona en el navegador, es gratis y no hay que instalar nada.
+> Construimos Plantea 3D: subes la foto o el PDF de un plano y en segundos tienes un modelo 3D con muros, puertas, ventanas, escaleras y muebles, que puedes medir, editar, recorrer por dentro y exportar a DXF o GLB. Funciona en el navegador, es gratis y no hay que instalar nada.
 >
 > Está en beta y queremos mejorarlo con quienes trabajan con planos todos los días. Pruébalo con un plano tuyo y cuéntanos qué falló o qué te gustaría con el botón «Sugerencias».
 >
-> 👉 https://plano-vivo.fleremiasflemin.workers.dev
+> 👉 https://plantea-3d.fleremiasflemin.workers.dev
 
 **Instagram / TikTok (texto del video):**
 
@@ -68,6 +68,6 @@ Más adelante, cuando el reconocimiento esté probado con planos reales de usuar
 
 ## Antes de crecer mucho
 
-- **Dominio propio** (por ejemplo `planovivo.app`), conectado al Worker desde el panel de Cloudflare. Se ve más profesional que una dirección `workers.dev` con el nombre de la cuenta.
+- **Dominio propio** (por ejemplo `plantea3d.app`), conectado al Worker desde el panel de Cloudflare. Se ve más profesional que una dirección `workers.dev` con el nombre de la cuenta.
 - **Página de privacidad** corta: los planos se procesan en el navegador y no se suben; el buzón guarda solo el texto que la persona escribe y, si lo pone, su contacto.
-- **Medición de visitas:** Cloudflare Web Analytics no usa cookies y se activa desde el panel (Workers → plano-vivo → Métricas).
+- **Medición de visitas:** Cloudflare Web Analytics no usa cookies y se activa desde el panel (Workers → plantea-3d → Métricas).

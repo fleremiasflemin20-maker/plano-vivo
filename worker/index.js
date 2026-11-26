@@ -9,7 +9,8 @@ import { ROUTES as AI_ROUTES } from './ai.js';
 import { createShare, readShare, MAX_SHARE } from './share.js';
 
 const SITES = [
-  'https://plano-vivo.fleremiasflemin.workers.dev',
+  'https://plantea-3d.fleremiasflemin.workers.dev',
+  'https://plantea-3d.fleremiasflemin.workers.dev',
   'https://fleremiasflemin20-maker.github.io',
 ];
 // The local Python engine serves the same page from the user's own computer.

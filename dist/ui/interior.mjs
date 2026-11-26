@@ -311,7 +311,7 @@ $('itemListBtn').onclick = () => {
       ['Mueble', 'Ambiente', 'Medidas', 'Color'],
       ...rows.map((r) => [r.name, r.room, r.size, r.color]),
     ],
-    'muebles-plano-vivo.csv',
+    'muebles-plantea-3d.csv',
   );
 };
 

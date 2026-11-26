@@ -24,7 +24,7 @@ import {
 import { cleanScene, cleanChange, ROUTES, KINDS } from './worker/ai.js';
 import worker from './worker/index.js';
 
-const SITE = 'https://plano-vivo.fleremiasflemin.workers.dev';
+const SITE = 'https://plantea-3d.fleremiasflemin.workers.dev';
 
 export async function runInteriorTests() {
   // Every AI furniture id exists in the 3D catalogue and the other way round.

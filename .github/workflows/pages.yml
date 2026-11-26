@@ -1,4 +1,4 @@
-name: Deploy Plano Vivo to GitHub Pages
+name: Deploy Plantea 3D to GitHub Pages
 on:
   push:
     branches: [main]

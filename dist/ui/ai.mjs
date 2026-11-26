@@ -21,7 +21,7 @@ import { resetPlan } from './plan.mjs';
 import { setStyle } from './interior.mjs';
 import { track } from './stats.mjs';
 
-const HOSTED = 'https://plano-vivo.fleremiasflemin.workers.dev';
+const HOSTED = 'https://plantea-3d.fleremiasflemin.workers.dev';
 const API =
   (location.origin === HOSTED || /^http:\/\/localhost:8788$/.test(location.origin) ? '' : HOSTED) +
   '/api/ia/';

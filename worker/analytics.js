@@ -57,7 +57,9 @@ export function source(ref) {
     .slice(0, 60);
   if (
     !host ||
-    /plano-vivo\.fleremiasflemin\.workers\.dev|fleremiasflemin20-maker\.github\.io/.test(host)
+    /(plantea-3d|plantea-3d)\.fleremiasflemin\.workers\.dev|fleremiasflemin20-maker\.github\.io/.test(
+      host,
+    )
   )
     return 'directo';
   if (!/^[a-z0-9.-]+$/.test(host)) return 'otro';

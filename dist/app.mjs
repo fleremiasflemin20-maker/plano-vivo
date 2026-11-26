@@ -1,4 +1,4 @@
-// Plano Vivo studio entry point: wires the UI modules together and restores the last project.
+// Plantea 3D studio entry point: wires the UI modules together and restores the last project.
 //
 //   ui/core.mjs   shared state, DOM helpers, undo history, autosave
 //   ui/plan.mjs   2D canvas, drawing tools, inspector, scale calibration

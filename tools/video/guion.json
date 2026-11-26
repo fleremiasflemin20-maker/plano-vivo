@@ -1,8 +1,8 @@
 [
  {
   "id": "portada",
-  "titulo": "Plano Vivo",
-  "texto": "¡Hola! Te presento Plano Vivo: convierte cualquier plano en un modelo 3D que puedes recorrer. ¡Directo en tu navegador, gratis y sin instalar nada!",
+  "titulo": "Plantea 3D",
+  "texto": "¡Hola! Te presento Plantea 3D: convierte cualquier plano en un modelo 3D que puedes recorrer. ¡Directo en tu navegador, gratis y sin instalar nada!",
   "audio": 9.58
  },
  {
@@ -14,7 +14,7 @@
  {
   "id": "construir",
   "titulo": "2 · Construir en 3D",
-  "texto": "Ahora, la magia: pulsa Construir en 3D. Plano Vivo lee tu plano y encuentra los muros con su grosor, las puertas, las ventanas, las escaleras, la terraza, ¡y hasta los muebles! Y la escala la saca solita de la barra gráfica.",
+  "texto": "Ahora, la magia: pulsa Construir en 3D. Plantea 3D lee tu plano y encuentra los muros con su grosor, las puertas, las ventanas, las escaleras, la terraza, ¡y hasta los muebles! Y la escala la saca solita de la barra gráfica.",
   "audio": 14.33
  },
  {
@@ -26,7 +26,7 @@
  {
   "id": "dual",
   "titulo": "4 · Vista dual",
-  "texto": "En Vista dual tienes el plano y el modelo, lado a lado. Lo que encontró Plano Vivo queda resaltado, para que lo revises en un momento.",
+  "texto": "En Vista dual tienes el plano y el modelo, lado a lado. Lo que encontró Plantea 3D queda resaltado, para que lo revises en un momento.",
   "audio": 7.78
  },
  {
@@ -98,7 +98,7 @@
  {
   "id": "cierre",
   "titulo": "Pruébalo y cuéntanos",
-  "texto": "Plano Vivo está en beta y queremos mejorarlo contigo. ¡Pruébalo con tus planos y cuéntanos qué te gustaría con el botón Sugerencias! Sin cuentas, sin complicaciones. ¡Te esperamos!",
+  "texto": "Plantea 3D está en beta y queremos mejorarlo contigo. ¡Pruébalo con tus planos y cuéntanos qué te gustaría con el botón Sugerencias! Sin cuentas, sin complicaciones. ¡Te esperamos!",
   "audio": 11.57
  }
 ]

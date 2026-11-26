@@ -28,7 +28,7 @@ const esc = (s) =>
 const csvCell = (v) =>
   /[;"\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
 let csvRows = null,
-  csvName = 'plano-vivo.csv';
+  csvName = 'plantea-3d.csv';
 
 export function openDialog(title, hint, html, rows, name) {
   $('proTitle').textContent = title;
@@ -295,7 +295,7 @@ function showTakeoff() {
         r.unit,
       ]),
     ],
-    'computos-plano-vivo.csv',
+    'computos-plantea-3d.csv',
   );
   for (const input of $('proBody').querySelectorAll('input.factor'))
     input.onchange = () => {
@@ -328,7 +328,7 @@ $('proAreas').onclick = () => {
       ...rows.map((r) => [r.id, r.name, r.area.toFixed(2)]),
       ['', 'Total', total.toFixed(2)],
     ],
-    'cuadro-de-areas-plano-vivo.csv',
+    'cuadro-de-areas-plantea-3d.csv',
   );
 };
 
@@ -338,7 +338,7 @@ $('proGlossary').onclick = () => {
   for (const [term, def] of GLOSSARY) html += `<tr><th>${esc(term)}</th><td>${esc(def)}</td></tr>`;
   openDialog(
     'Glosario de obra',
-    'Términos que usa Plano Vivo.',
+    'Términos que usa Plantea 3D.',
     html + '</tbody></table>',
     null,
     '',

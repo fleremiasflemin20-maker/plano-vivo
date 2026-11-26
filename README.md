@@ -1,10 +1,10 @@
-# Plano Vivo
+# Plantea 3D
 
 Editor de planos 2D con reconstrucción 3D, recorrido y motor Python local.
 
-**Web:** https://plano-vivo.fleremiasflemin.workers.dev (Cloudflare) · copia en https://fleremiasflemin20-maker.github.io/plano-vivo/
+**Web:** https://plantea-3d.fleremiasflemin.workers.dev (Cloudflare) · copia en https://fleremiasflemin20-maker.github.io/plano-vivo/
 
-**Video de presentación (2 min 54 s, con música):** botón «▶ Ver cómo funciona» en la web, o [`dist/media/plano-vivo-presentacion.mp4`](dist/media/plano-vivo-presentacion.mp4).
+**Video de presentación (2 min 54 s, con música):** botón «▶ Ver cómo funciona» en la web, o [`dist/media/plantea-3d-presentacion.mp4`](dist/media/plantea-3d-presentacion.mp4).
 
 **Sugerencias:** botón «Sugerencias» en la web, sin cuenta. Plan de lanzamiento y cómo leerlas: [`docs/lanzamiento.md`](docs/lanzamiento.md).
 
@@ -22,7 +22,7 @@ Requiere Python 3.10 o superior. En Windows:
 
 ```powershell
 git clone https://github.com/fleremiasflemin20-maker/plano-vivo.git
-cd plano-vivo
+cd plantea-3d
 .\setup-local.ps1
 ```
 

@@ -129,7 +129,7 @@ def mix(scenes):
         '[voz][fondo]amix=inputs=2:normalize=0,volume=3.5dB,alimiter=limit=0.8,apad[aout]'
     )
     MEDIA.mkdir(exist_ok=True)
-    out = MEDIA / 'plano-vivo-presentacion.mp4'
+    out = MEDIA / 'plantea-3d-presentacion.mp4'
     run(
         'ffmpeg',
         '-v',
@@ -176,14 +176,14 @@ def mix(scenes):
         'scale=640:-1',
         '-q:v',
         '4',
-        str(MEDIA / 'plano-vivo-presentacion.jpg'),
+        str(MEDIA / 'plantea-3d-presentacion.jpg'),
     )
     cues = ['WEBVTT', '']
     for t in timeline:
         start = t['start'] + 350
         end = start + by_id[t['id']]['audio'] * 1000
         cues += [f"{ts(start, '.')} --> {ts(end, '.')}", by_id[t['id']]['texto'], '']
-    (MEDIA / 'plano-vivo-presentacion.vtt').write_text('\n'.join(cues), encoding='utf-8')
+    (MEDIA / 'plantea-3d-presentacion.vtt').write_text('\n'.join(cues), encoding='utf-8')
 
 
 if __name__ == '__main__':

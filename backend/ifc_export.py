@@ -7,7 +7,7 @@ import ifcopenshell.api
 def export_ifc(project):
     model = ifcopenshell.file(schema='IFC4')
     run = lambda operation, **kwargs: ifcopenshell.api.run(operation, model, **kwargs)
-    root = run('root.create_entity', ifc_class='IfcProject', name=project.get('name', 'Plano Vivo'))
+    root = run('root.create_entity', ifc_class='IfcProject', name=project.get('name', 'Plantea 3D'))
     units = [run('unit.add_si_unit', unit_type=t) for t in ('LENGTHUNIT', 'AREAUNIT', 'VOLUMEUNIT')]
     run('unit.assign_unit', units=units)
     context = run('context.add_context', context_type='Model')
@@ -52,12 +52,12 @@ def export_ifc(project):
         )
         run('geometry.assign_representation', product=wall, representation=rep)
         run('geometry.edit_object_placement', product=wall, matrix=matrix, is_si=True)
-        pset = run('pset.add_pset', product=wall, name='PlanoVivo_Origen')
+        pset = run('pset.add_pset', product=wall, name='Plantea3D_Origen')
         run(
             'pset.edit_pset',
             pset=pset,
             properties={
-                'IdPlanoVivo': str(w.get('id', index)),
+                'IdPlantea3D': str(w.get('id', index)),
                 'PendienteRevision': bool(w.get('inferred', False)),
                 'Uso': 'Modelo conceptual; sin verificacion estructural',
             },

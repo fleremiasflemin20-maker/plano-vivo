@@ -60,7 +60,7 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title='Plano Vivo Local', version='2.1', lifespan=lifespan)
+app = FastAPI(title='Plantea 3D Local', version='2.1', lifespan=lifespan)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=['localhost', '127.0.0.1'])
 
 
@@ -327,7 +327,7 @@ class Wall(BaseModel):
 
 
 class Project(BaseModel):
-    name: str = Field(default='Plano Vivo', max_length=80)
+    name: str = Field(default='Plantea 3D', max_length=80)
     width: float = Field(ge=1, le=300, allow_inf_nan=False)
     ratio: float = Field(gt=0.02, lt=50, allow_inf_nan=False)
     height: float = Field(ge=2, le=12, allow_inf_nan=False)
@@ -340,7 +340,7 @@ def ifc(project: Project):
     return Response(
         export_ifc(project.model_dump(exclude_none=True)),
         media_type='application/x-step',
-        headers={'Content-Disposition': 'attachment; filename="plano-vivo.ifc"'},
+        headers={'Content-Disposition': 'attachment; filename="plantea-3d.ifc"'},
     )
 
 

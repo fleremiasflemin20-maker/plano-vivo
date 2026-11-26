@@ -7,7 +7,7 @@ export const ADMIN_HTML = String.raw`<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Plano Vivo · Panel de administración</title>
+<title>Plantea 3D · Panel de administración</title>
 <style>
   :root { --bg:#f3f6f4; --card:#fff; --ink:#17322a; --ink2:#4c6459; --muted:#7d9187; --line:#e3ebe6; --grid:#edf2ef; --mark:#0f9467; --wash:rgba(15,148,103,.10); --accent:#1d6b50; }
   * { box-sizing:border-box }
@@ -46,14 +46,14 @@ export const ADMIN_HTML = String.raw`<!doctype html>
 </head>
 <body>
 <div id="login" class="login" hidden>
-  <h1 style="font-size:18px;margin:0 0 4px">Panel de Plano Vivo</h1>
+  <h1 style="font-size:18px;margin:0 0 4px">Panel de Plantea 3D</h1>
   <p class="hint">Escribe la clave de administración (el secreto ADMIN_TOKEN del Worker). Solo se guarda en esta pestaña.</p>
   <form id="loginForm"><input id="key" type="password" autocomplete="current-password" placeholder="Clave" required><button>Entrar</button></form>
   <p class="err" id="loginErr"></p>
 </div>
 <div id="app" hidden>
   <header>
-    <h1>plano<b>vivo</b> · panel</h1>
+    <h1>plantea<b>3D</b> · panel</h1>
     <span class="sp"></span>
     <label>Periodo <select id="range"><option value="7">7 días</option><option value="30" selected>30 días</option><option value="90">90 días</option><option value="365">1 año</option></select></label>
     <button id="reload">Actualizar</button><button id="logout">Salir</button>
@@ -188,7 +188,7 @@ export const ADMIN_HTML = String.raw`<!doctype html>
     if (!data) return;
     var rows = [['dia', 'visitantes', 'paginas', 'primera_vez']].concat(data.serie.map(function (d) { return [d.dia, d.visitantes, d.visitas, d.nuevos]; }));
     var blob = new Blob(['﻿' + rows.map(function (r) { return r.join(';'); }).join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'plano-vivo-visitas-' + data.hasta + '.csv'; a.click();
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'plantea-3d-visitas-' + data.hasta + '.csv'; a.click();
   };
   var resizeTimer; window.addEventListener('resize', function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(function () { if (data) render(); }, 200); });
   load();

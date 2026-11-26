@@ -663,7 +663,7 @@ $('save').onclick = () => {
   const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' })),
     a = document.createElement('a');
   a.href = url;
-  a.download = 'plano-vivo.json';
+  a.download = 'plantea-3d.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   say('Proyecto descargado. Usa Abrir proyecto para continuar después.');
@@ -715,7 +715,7 @@ $('json').onchange = async (e) => {
     rebuild();
     say('Proyecto restaurado.');
   } catch {
-    say('El archivo no es un proyecto válido de Plano Vivo.');
+    say('El archivo no es un proyecto válido de Plantea 3D.');
   }
 };
 $('demo').onclick = () => {

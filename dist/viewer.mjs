@@ -22,7 +22,7 @@ export function createViewer(container, onStatus) {
   sun.shadow.bias = -0.0004;
   scene.add(sun);
   const group = new THREE.Group();
-  group.name = 'Plano Vivo';
+  group.name = 'Plantea 3D';
   scene.add(group);
   let model = null,
     walking = false,

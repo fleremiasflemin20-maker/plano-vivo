@@ -23,4 +23,4 @@ if (-not $alreadyRunning) {
     }
     if (-not $alreadyRunning) { throw 'El motor no arrancó. Consulta runtime/server-error.log.' }
 }
-Write-Output 'Plano Vivo Local está disponible en http://127.0.0.1:8877/'
+Write-Output 'Plantea 3D Local está disponible en http://127.0.0.1:8877/'

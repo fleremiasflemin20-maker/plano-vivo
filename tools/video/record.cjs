@@ -1,11 +1,11 @@
-// Records the Plano Vivo walkthrough with Playwright (Edge), scene by scene, timed to
+// Records the Plantea 3D walkthrough with Playwright (Edge), scene by scene, timed to
 // the narration. Writes raw.webm and timeline.json (scene start times, ms).
 // Run from tools/video (see montar.py). SITE=<url> records another deployment.
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 
-const URL = process.env.SITE || 'https://plano-vivo.fleremiasflemin.workers.dev/';
+const URL = process.env.SITE || 'https://plantea-3d.fleremiasflemin.workers.dev/';
 const dir = __dirname;
 const scenes = JSON.parse(fs.readFileSync(path.join(dir, 'guion.json'), 'utf8'));
 const W = 1280,
@@ -145,7 +145,7 @@ const OVERLAY = () => {
       await at(-60, -60);
       await page.evaluate(() =>
         window.__card(
-          '<h1>▱ Plano Vivo</h1><h2>Del plano al espacio</h2><p>De un plano a un modelo 3D que puedes recorrer.</p><p>En tu navegador · Gratis · Sin instalar nada</p>',
+          '<h1>▱ Plantea 3D</h1><h2>Del plano al espacio</h2><p>De un plano a un modelo 3D que puedes recorrer.</p><p>En tu navegador · Gratis · Sin instalar nada</p>',
         ),
       );
     },
@@ -296,7 +296,7 @@ const OVERLAY = () => {
       await at(-60, -60);
       await page.evaluate(() =>
         window.__card(
-          '<h1>▱ Plano Vivo</h1><h2>Versión beta · Pruébalo y cuéntanos</h2><p>Botón «Sugerencias» dentro de la app, sin cuenta</p><div class="url">plano-vivo.fleremiasflemin.workers.dev</div>',
+          '<h1>▱ Plantea 3D</h1><h2>Versión beta · Pruébalo y cuéntanos</h2><p>Botón «Sugerencias» dentro de la app, sin cuenta</p><div class="url">plantea-3d.fleremiasflemin.workers.dev</div>',
         ),
       );
     },

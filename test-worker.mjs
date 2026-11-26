@@ -22,7 +22,7 @@ function fakeEnv({ allow = true } = {}) {
   };
 }
 
-const SITE = 'https://plano-vivo.fleremiasflemin.workers.dev';
+const SITE = 'https://plantea-3d.fleremiasflemin.workers.dev';
 const post = (body, origin = SITE, url = SITE + '/api/sugerencias') =>
   new Request(url, {
     method: 'POST',

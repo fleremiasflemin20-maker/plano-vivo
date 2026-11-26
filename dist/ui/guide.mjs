@@ -8,7 +8,7 @@ import { track } from './stats.mjs';
 const SEEN = 'pv-guia-2'; // new tour: everyone sees it once, also those who saw the first one
 const STEPS = [
   {
-    title: 'Bienvenido a Plano Vivo',
+    title: 'Bienvenido a Plantea 3D',
     text: 'Este es tu estudio para pasar de un plano a un modelo 3D, amueblarlo con IA y documentarlo. Te mostramos cada sección en dos minutos. Lo que ves es una vivienda de ejemplo: todo se puede deshacer con Ctrl Z.',
   },
   {

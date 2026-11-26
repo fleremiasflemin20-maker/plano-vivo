@@ -25,7 +25,7 @@ const MAX_PROJECT = 30 * 1024 * 1024;
 // --- Project files -------------------------------------------------------
 
 $('save').onclick = async () => {
-  download(new Blob([JSON.stringify(project())], { type: 'application/json' }), 'plano-vivo.json');
+  download(new Blob([JSON.stringify(project())], { type: 'application/json' }), 'plantea-3d.json');
   await snapshot();
   say('Proyecto descargado. Incluye imagen, medidas y geometría.');
 };
@@ -50,7 +50,7 @@ $('json').onchange = async (e) => {
     await restore(data);
     say('Proyecto restaurado. También se admiten proyectos de la versión original.');
   } catch {
-    say('El archivo no es un proyecto válido de Plano Vivo.');
+    say('El archivo no es un proyecto válido de Plantea 3D.');
   } finally {
     $('json').value = '';
   }
@@ -182,7 +182,7 @@ $('exportDXF').onclick = () => {
       ],
       { type: 'application/dxf' },
     ),
-    'plano-vivo.dxf',
+    'plantea-3d.dxf',
   );
   say(
     'DXF exportado en metros: capas MUROS, PUERTAS, VENTANAS, ESCALERAS, TERRAZAS, MUEBLES, TEXTOS, EJES, COLUMNAS y AMBIENTES.',
@@ -190,13 +190,13 @@ $('exportDXF').onclick = () => {
 };
 
 $('exportSVG').onclick = () => {
-  download(new Blob([toSVG()], { type: 'image/svg+xml' }), 'plano-vivo.svg');
+  download(new Blob([toSVG()], { type: 'image/svg+xml' }), 'plantea-3d.svg');
 };
 
 $('exportCSV').onclick = () => {
   download(
     new Blob([quantitiesCSV()], { type: 'text/csv;charset=utf-8' }),
-    'cantidades-plano-vivo.csv',
+    'cantidades-plantea-3d.csv',
   );
   say(
     'Cantidades geométricas exportadas. Los encuentros pueden duplicar volumen; no son un presupuesto de obra.',
@@ -207,7 +207,7 @@ $('exportGLB').onclick = async () => {
   try {
     $('exportGLB').disabled = true;
     const buffer = await viewer.export();
-    download(new Blob([buffer], { type: 'model/gltf-binary' }), 'plano-vivo.glb');
+    download(new Blob([buffer], { type: 'model/gltf-binary' }), 'plantea-3d.glb');
     say('Modelo GLB exportado en metros.');
   } catch {
     say('No se pudo exportar el modelo GLB.');
@@ -220,7 +220,7 @@ $('exportPNG').onclick = () => {
   try {
     const a = document.createElement('a');
     a.href = viewer.png();
-    a.download = 'plano-vivo-3d.png';
+    a.download = 'plantea-3d-3d.png';
     a.click();
   } catch {
     say('No se pudo capturar el modelo.');
@@ -238,7 +238,7 @@ $('exportIFC').onclick = async () => {
       body: JSON.stringify(data),
     });
     if (!response.ok) throw Error();
-    download(await response.blob(), 'plano-vivo.ifc');
+    download(await response.blob(), 'plantea-3d.ifc');
     say('IFC4 exportado: muros, aberturas y relaciones de puertas y ventanas. Modelo conceptual.');
   } catch {
     say('No se pudo exportar IFC. Comprueba que el motor local está activo.');
