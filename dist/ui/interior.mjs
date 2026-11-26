@@ -11,6 +11,8 @@ import {
   restyle,
   itemList,
   guessType,
+  obstaclesFrom,
+  withoutRecognizedFurniture,
 } from '../interior.mjs';
 import { inRoom, roomName, roomTitle } from '../pro.mjs';
 import { $, W, D, fmt, say, state, viewer, checkpoint, uid } from './core.mjs';
@@ -25,7 +27,8 @@ const roomPoint = (room) => {
 };
 const selRoom = () => state.rooms[Number($('intRoom').value)] || null;
 const typeOf = (room, i) =>
-  roomName(room, state.roomTags) || (i === 0 ? 'Sala-comedor' : guessType(room, W(), D()));
+  roomName(room, state.roomTags) ||
+  (i === 0 ? 'Sala-comedor' : guessType(room, W(), D()) || 'Baño');
 
 // --- Style chips -----------------------------------------------------------------------
 for (const [key, st] of Object.entries(STYLES)) {
@@ -57,7 +60,17 @@ $('furnishAll').onclick = () => {
     return;
   }
   checkpoint();
-  state.items = furnishAll(state.rooms, state.roomTags, state.walls, W(), D(), state.interiorStyle);
+  // The plan's recognised furniture blocks are replaced by real furniture (never both).
+  state.features = withoutRecognizedFurniture(state.features, state.rooms);
+  state.items = furnishAll(
+    state.rooms,
+    state.roomTags,
+    state.walls,
+    W(),
+    D(),
+    state.interiorStyle,
+    obstaclesFrom(state.features, state.columns, W(), D()),
+  );
   state.finishes = styleFinishes(state.rooms, state.interiorStyle);
   state.selectedItem = null;
   rebuild();
@@ -124,9 +137,22 @@ $('furnishRoom').onclick = () => {
     i = Number($('intRoom').value);
   if (!room) return;
   checkpoint();
+  state.features = withoutRecognizedFurniture(state.features, [room]);
   state.items = state.items
     .filter((it) => !inRoom(it, room))
-    .concat(furnishRoom(room, typeOf(room, i), state.walls, W(), D(), state.interiorStyle));
+    .concat(
+      furnishRoom(
+        room,
+        typeOf(room, i),
+        state.walls,
+        W(),
+        D(),
+        state.interiorStyle,
+        null,
+        0,
+        obstaclesFrom(state.features, state.columns, W(), D()),
+      ),
+    );
   if (!state.finishes.some((f) => inRoom(f, room))) {
     const st = STYLES[state.interiorStyle];
     state.finishes.push({ ...roomPoint(room), floor: st.floor, wall: st.wall });
