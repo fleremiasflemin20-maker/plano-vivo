@@ -64,6 +64,13 @@ export async function runInteriorTests() {
       { tipo: 'Baño', area: 3.5 },
     ],
     [
+      { tipo: 'Sala-comedor', area: 26 },
+      { tipo: 'Cocina', area: 10 },
+      { tipo: 'Dormitorio principal', area: 13 },
+      { tipo: 'Dormitorio', area: 10 },
+      { tipo: 'Baño', area: 5 },
+    ],
+    [
       { tipo: 'Sala', area: 16 },
       { tipo: 'Comedor', area: 10 },
       { tipo: 'Cocina', area: 8 },
@@ -94,6 +101,19 @@ export async function runInteriorTests() {
         if ((seat(a.kind) && under(b.kind)) || (seat(b.kind) && under(a.kind))) continue;
         if (/coffee/.test(a.kind) || /coffee/.test(b.kind)) continue;
         assert.ok(!hit(box(a, L.W, L.D), box(b, L.W, L.D)), `${a.kind} on top of ${b.kind}`);
+      }
+    // Nothing tall pressed against a bed (50 cm to walk by and make it).
+    for (const bed of solid.filter((it) => /^bed_/.test(it.kind)))
+      for (const o of solid.filter(
+        (it) => TALL.has(it.kind) && rooms.some((r) => inRoom(it, r) && inRoom(bed, r)),
+      )) {
+        const p = box(bed, L.W, L.D),
+          q = box(o, L.W, L.D);
+        const g = Math.hypot(
+          Math.max(0, q.x0 - p.x1, p.x0 - q.x1),
+          Math.max(0, q.y0 - p.y1, p.y0 - q.y1),
+        );
+        assert.ok(g >= 0.49, `${o.kind} ${g.toFixed(2)} m from the bed`);
       }
     const st = obstacles[0];
     for (const it of solid) {

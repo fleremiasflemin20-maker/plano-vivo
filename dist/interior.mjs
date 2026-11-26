@@ -162,6 +162,23 @@ function clearOfDoors(it, doors, W, D) {
     }),
   );
 }
+/** Free distance (m) between two pieces' bounding boxes. */
+function boxGap(a, b, W, D) {
+  const box = (it) => {
+    const r = Math.abs(Math.sin(((it.rot || 0) * Math.PI) / 180)) > 0.5,
+      w = r ? it.d : it.w,
+      d = r ? it.w : it.d;
+    return {
+      x0: it.x * W - w / 2,
+      x1: it.x * W + w / 2,
+      y0: it.y * D - d / 2,
+      y1: it.y * D + d / 2,
+    };
+  };
+  const p = box(a),
+    q = box(b);
+  return Math.hypot(Math.max(0, q.x0 - p.x1, p.x0 - q.x1), Math.max(0, q.y0 - p.y1, p.y0 - q.y1));
+}
 function overlaps(a, b, W, D) {
   const box = (it) => {
     const r = Math.abs(Math.sin((it.rot * Math.PI) / 180)) > 0.5;
@@ -214,7 +231,7 @@ const OPP = { n: 's', s: 'n', w: 'e', e: 'w' };
 export const FRONT = {
   bed_double: 0.6,
   bed_single: 0.5,
-  wardrobe: 0.75,
+  wardrobe: 0.65,
   dresser: 0.6,
   nightstand: 0.25,
   desk: 0.6,
@@ -349,6 +366,16 @@ export function sensible(it, room, kept, ctx) {
   if (it.kind !== 'rug' && obstacles.some((r) => fp.some((p) => inRect(p, r))))
     return why('escalera o columna');
   if (blocksWindow(it, wins, W, D)) return why('tapa una ventana');
+  // Around a bed: 50 cm free to walk by and make it, nothing tall closer than that.
+  const isBed = (k) => /^bed_/.test(k);
+  if (
+    kept.some(
+      (o) =>
+        ((TALL.has(it.kind) && isBed(o.kind)) || (isBed(it.kind) && TALL.has(o.kind))) &&
+        boxGap(it, o, W, D) < 0.5,
+    )
+  )
+    return why('pegado a la cama');
   const solid = (o) => !LOW.has(o.kind);
   // Its own use zone: inside the room, free of obstacles and of solid pieces.
   if (FRONT[it.kind]) {
@@ -597,34 +624,45 @@ export function furnishRoom(
       }
       return got;
     };
+    /** The wardrobe on a solid wall (no door, no window) other than the bed's. */
+    const closet = (bs) => {
+      const others = sd.filter((x) => x.side !== bs);
+      return best(
+        'wardrobe',
+        [...others.filter((x) => !x.door && !x.win), ...others].map((x) => x.side),
+        { ts: [0.5, 0.15, 0.85, 0, 1], sizes: [{ w: 1.2 }, { w: 1.0 }] },
+      );
+    };
     // The bed where both nightstands fit (a double needs both), else one, else just the bed.
     // «Reacomodar» (variant) moves it to the next wall where it works just as well.
     let bed = null,
       tables = [];
     const solids = () => out.filter((o) => o.kind !== 'rug');
     for (const kind of double ? ['bed_double', 'bed_single'] : ['bed_single']) {
-      for (const need of kind === 'bed_double' ? [2, 1, 0] : [1, 0]) {
-        const found = [];
-        for (const sx of order)
-          for (const tt of [0.5, 0.3, 0.7, 0.15, 0.85, 0, 1]) {
-            const it = against(kind, b, sx, tt, W, D, { color: fab[2] });
-            if (!it || !sensible(it, room, solids(), ctx0)) continue;
-            out.push(it);
-            const ns = stands(it);
-            out.pop();
-            if (ns.length >= need) {
-              found.push({ it, ns });
-              break; // the best position on this wall; try the next wall
-            }
-          }
-        if (found.length) {
-          const pick = found[variant % found.length];
-          bed = pick.it;
-          tables = pick.ns;
-          break;
+      // Every wall's best spot, scored: the wardrobe still fits (2), each nightstand (1).
+      const found = [];
+      for (const sx of order) {
+        let top = null;
+        for (const tt of [0.5, 0.3, 0.7, 0.15, 0.85, 0, 1]) {
+          const it = against(kind, b, sx, tt, W, D, { color: fab[2] });
+          if (!it || !sensible(it, room, solids(), ctx0)) continue;
+          out.push(it);
+          const ns = stands(it);
+          out.push(...ns);
+          const wd = closet(sideOf(it));
+          out.splice(out.length - ns.length - 1);
+          const score = (wd ? 2 : 0) + ns.length;
+          if (!top || score > top.score) top = { it, ns, score };
         }
+        if (top) found.push(top);
       }
-      if (bed) break;
+      if (!found.length) continue;
+      const max = Math.max(...found.map((f) => f.score)),
+        good = found.filter((f) => f.score === max),
+        pick = good[variant % good.length];
+      bed = pick.it;
+      tables = pick.ns;
+      break;
     }
     // Everything else in the room follows the wall the bed ended on.
     const bedSide = bed ? sideOf(bed) : main;
@@ -644,13 +682,7 @@ export function furnishRoom(
     }
     // Wardrobe on a solid wall (no door, no window) other than the bed's, then a dresser.
     const others = sd.filter((x) => x.side !== bedSide);
-    put(
-      best(
-        'wardrobe',
-        [...others.filter((x) => !x.door && !x.win), ...others].map((x) => x.side),
-        { ts: [0.5, 0.15, 0.85, 0, 1], sizes: [{ w: 1.2 }, { w: 1.0 }] },
-      ),
-    );
+    put(closet(bedSide));
     put(best('dresser', [OPP[bedSide], ...others.map((x) => x.side)], { color: st.wood }));
     put(
       best('plant', [OPP[bedSide]], {
