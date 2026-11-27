@@ -53,8 +53,27 @@ header {
   display: flex;
   align-items: center;
 }
-.brand > span:not(.mark) {
+.brand .name {
+  position: relative;
+  display: inline-block;
+  line-height: 1;
+}
+.brand .name > span {
   font-weight: 400;
+}
+/* «by Flemin»: the author's mark, small, under the name. */
+.brand .by {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 3px;
+  font:
+    700 10px/1 'DM Sans',
+    sans-serif;
+  font-style: normal;
+  letter-spacing: 0.4px;
+  color: #28866a;
+  white-space: nowrap;
 }
 .mark {
   font-size: 42px;
